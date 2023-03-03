@@ -1,0 +1,3 @@
+(library
+ (name linearalg)
+ (public_name Linearalg))
