@@ -78,7 +78,7 @@ let dot_tests =
     dot_test "negative with positive" ((-10., -10., -1.), (9., 12., 2.)) (-212.);
     dot_test "negative with negative" ((-10., -10., -1.), (-9., -12., -2.)) 212.;
     dot_test "positive with positive"
-      ((10., 20., 30.), (1. +. sqrt 2., 1., 1. *. sqrt 3. /. 2.))
+      ((10., 20., 30.), (1. +. sqrt 2., 1., (1. +. sqrt 3.) /. 2.))
       (10. +. (10. *. sqrt 2.) +. 20. +. 15. +. (15. *. sqrt 3.));
     dot_test "mixed negative and positive"
       ((-1., 2., 3.), (-3., 1., -0.25))
@@ -90,7 +90,7 @@ let magnitude_tests =
     magnitude_test "zero" (0., 0., 0.) 0.;
     magnitude_test "positive" (2., 1., 0.5) (sqrt 5.25);
     magnitude_test "negative" (-3., -4., -5.) (5. *. sqrt 2.);
-    magnitude_test "irrationals" (sqrt 2., 1., sqrt 3. /. 2.) (sqrt 5.25);
+    magnitude_test "irrationals" (sqrt 2., 1., sqrt 3. /. 2.) (sqrt 3.75);
     magnitude_test "mixed positive and negative" (-8.1, 1.3, -2.5) (sqrt 73.55);
   ]
 
