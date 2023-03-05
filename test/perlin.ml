@@ -310,6 +310,6 @@ let matrix_tests =
     ]
 
 let suite =
-  "test suite for project" >::: List.flatten [ (*vector_tests*) matrix_tests ]
+  "test suite for project" >::: List.flatten [ vector_tests; matrix_tests ]
 
 let _ = run_test_tt_main suite
