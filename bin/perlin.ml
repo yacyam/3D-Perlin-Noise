@@ -69,6 +69,8 @@ let convert_grayscale x =
     and y coordinates on the screen, bounded by the [size] which is specified by
     matrix size. Requires: [mat].row_length and [size] are the same length *)
 let display_matrix mat x y size =
+  (* [y_hold] and [x_hold] will always retain the first x and y input, so that
+     we can calculate when exactly the x and y are off screen, based on [size]*)
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
@@ -82,11 +84,6 @@ let display_matrix mat x y size =
 
 let gray_matrix f n = Matrix.basic_matrix n n (rgb f f f)
 
-let display_entry x y n =
-  let rbg_col = convert_grayscale (Random.float 100.) in
-  set_color rbg_col;
-  fill_rect x y n n
-
 let rec grid x y size =
   if y > snd scn_size then ()
   else if x > fst scn_size then grid 0 (y + size) size
@@ -95,4 +92,4 @@ let rec grid x y size =
     grid (x + size) y size)
 
 let () = Random.self_init ()
-let () = grid 0 0 5
+let () = grid 0 0 10
