@@ -6,7 +6,7 @@ open Vector
 let _ = open_graph ""
 let () = set_window_title "Basic Starter Code"
 let () = resize_window 600 600
-let size = (size_x (), size_y ())
+let scn_size = (size_x (), size_y ())
 
 (** [distance_matrix mat n x y] creates a matrix of distances to each pixel
     scaled by 1 over [n], as [n] denotes the size of the screen. For each row of
@@ -65,16 +65,34 @@ let convert_grayscale x =
   else if scaled_x <= 244.0 then rgb 244 244 244
   else rgb 255 255 255
 
+(** [display_matrix mat x y size] displays the matrix entries at the specified x
+    and y coordinates on the screen, bounded by the [size] which is specified by
+    matrix size. Requires: [mat].row_length and [size] are the same length *)
+let display_matrix mat x y size =
+  let rec display_matrix_helper x y x_hold y_hold =
+    if y_hold + size <= y then ()
+    else if x_hold + size <= x then
+      display_matrix_helper (x - size) (y + 5) x_hold y_hold
+    else (
+      set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
+      fill_rect x y 5 5;
+      display_matrix_helper (x + 5) y x_hold y_hold)
+  in
+  display_matrix_helper x y x y
+
+let gray_matrix f n = Matrix.basic_matrix n n (rgb f f f)
+
 let display_entry x y n =
   let rbg_col = convert_grayscale (Random.float 100.) in
   set_color rbg_col;
   fill_rect x y n n
 
-let rec grid x y n =
-  let _ = display_entry x y n in
-  if x > fst size then grid 0 (y + n) n
-  else if y > snd size then ()
-  else grid (x + n) y n
+let rec grid x y size =
+  if y > snd scn_size then ()
+  else if x > fst scn_size then grid 0 (y + size) size
+  else (
+    display_matrix (gray_matrix (Random.int 255) size) x y size;
+    grid (x + size) y size)
 
 let () = Random.self_init ()
-let () = grid 0 0 10
+let () = grid 0 0 5
