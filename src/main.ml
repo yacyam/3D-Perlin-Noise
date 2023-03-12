@@ -264,18 +264,6 @@ let random_values =
     205;
   ]
 
-let fstt = function
-  | x, _, _, _ -> x
-
-let sndd = function
-  | _, x, _, _ -> x
-
-let thrd = function
-  | _, _, x, _ -> x
-
-let frth = function
-  | _, _, _, x -> x
-
 (** [smooth] is the result of apply the function (6n^2) - (15n^4) + (10n^3) to
     [n]. The resulting n will be used in interpolation.*)
 let smooth n =
@@ -290,20 +278,20 @@ let interpolate upper_left upper_right lower_left lower_right frac_x frac_y =
   let smooth_x = smooth frac_x in
   let smooth_y = smooth frac_y in
   let interpolate_1 =
-    upper_right -. upper_left |> ( *. ) smooth_x |> ( +. ) upper_left
+    upper_right -. upper_left |> ( *. ) smooth_y |> ( +. ) upper_left
   in
   let interpolate_2 =
-    lower_right -. lower_left |> ( *. ) smooth_x |> ( +. ) lower_left
+    lower_right -. lower_left |> ( *. ) smooth_y |> ( +. ) lower_left
   in
-  interpolate_2 -. interpolate_1 |> ( *. ) smooth_y |> ( +. ) interpolate_1
+  interpolate_2 -. interpolate_1 |> ( *. ) smooth_x |> ( +. ) interpolate_1
 
 (** [dot_grad_dist] is the dot product of a [distane_vector] and a gradient
     vector that is chosen based on [random] value when called in
     [gradient_of_pixel]. *)
 let dot_grad_dist (random : int) (distance_vector : vector) : float =
-  if random = 0 then dot (1.414, 1.414, 0.0) distance_vector
-  else if random = 1 then dot (-1.414, 1.414, 0.0) distance_vector
-  else if random = 2 then dot (1.414, -1.414, 0.0) distance_vector
+  if random = 0 then dot (1.0, 1.0, 0.0) distance_vector
+  else if random = 1 then dot (-1.0, 1.0, 0.0) distance_vector
+  else if random = 2 then dot (1.0, -1.0, 0.0) distance_vector
   else dot (-1.0, -1.0, 0.0) distance_vector
 
 (** [gradient_of_pixel] is the final color value of a pixel. It takes in
@@ -313,18 +301,22 @@ let dot_grad_dist (random : int) (distance_vector : vector) : float =
     a certain pixel on the grid. It does this four times for each corner and
     takes dot product for each and then interpolates to get a final value. *)
 let gradient_of_pixel (pixel_pos_1, pixel_pos_2, pixel_pos_3, pixel_pos_4) =
-  let x_float = get_x pixel_pos_3 *. 100000. in
-  let y_float = get_y pixel_pos_3 *. 100000. in
+  let x_float = get_x pixel_pos_3 in
+  let y_float = get_y pixel_pos_3 in
   let x_pos = Int.abs (Float.to_int x_float) in
   let y_pos = Int.abs (Float.to_int y_float) in
+  (* TL *)
   let g1 = List.nth random_values (x_pos mod 256) in
-  let g1_final = List.nth random_values ((g1 + y_pos) mod 256) mod 4 in
+  let g1_final = List.nth random_values ((g1 + y_pos + 1) mod 256) mod 4 in
+  (* TR *)
   let g2 = List.nth random_values ((x_pos + 1) mod 256) in
-  let g2_final = List.nth random_values ((g2 + y_pos) mod 256) mod 4 in
-  let g3 = List.nth random_values (y_pos mod 256) in
-  let g3_final = List.nth random_values ((g3 + y_pos + 1) mod 256) mod 4 in
-  let g4 = List.nth random_values ((y_pos + 1) mod 256) in
-  let g4_final = List.nth random_values ((g4 + y_pos + 1) mod 256) mod 4 in
+  let g2_final = List.nth random_values ((g2 + y_pos + 1) mod 256) mod 4 in
+  (* BL *)
+  let g3 = List.nth random_values (x_pos mod 256) in
+  let g3_final = List.nth random_values ((g3 + y_pos) mod 256) mod 4 in
+  (* BR *)
+  let g4 = List.nth random_values ((x_pos + 1) mod 256) in
+  let g4_final = List.nth random_values ((g4 + y_pos) mod 256) mod 4 in
   let frac_x = x_float -. Float.floor x_float in
   let frac_y = y_float -. Float.floor y_float in
   let d1 = dot_grad_dist g1_final pixel_pos_1 in

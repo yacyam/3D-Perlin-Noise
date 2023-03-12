@@ -8,30 +8,18 @@ let () = set_window_title "Basic Starter Code"
 let () = resize_window 600 600
 let scn_size = (size_x (), size_y ())
 
-let fstt = function
-  | x, _, _, _ -> x
-
-let sndd = function
-  | _, x, _, _ -> x
-
-let thrd = function
-  | _, _, x, _ -> x
-
-let frth = function
-  | _, _, _, x -> x
-
 (** [distance_matrix mat n x y] creates a matrix of distances to each pixel
     scaled by 1 over [n], as [n] denotes the size of the screen. For each row of
     the matrix, each entry holds the distance from the TOP LEFT, TOP RIGHT,
     BOTTOM LEFT, and BOTTOM RIGHT based on the [x] and [y] position of pixel.
 
     Requires: [mat] must be an [n] by [n] matrix. *)
-let rec distance_matrix mat n x y :
+let rec distance_matrix mat size x y :
     (vector * vector * vector * vector) Matrix.matrix =
-  let x_dist = float_of_int x /. float_of_int n in
-  let y_dist = float_of_int y /. float_of_int n in
-  if x >= n then distance_matrix mat n 0 (y + 1)
-  else if y >= n then mat
+  let x_dist = float_of_int x in
+  let y_dist = float_of_int y in
+  if y >= size then mat
+  else if x >= size then distance_matrix mat size 0 (y + 1)
   else
     distance_matrix
       (Matrix.add_entry y x
@@ -44,7 +32,7 @@ let rec distance_matrix mat n x y :
            (*BR*)
            (x_dist -. 1.0, y_dist, 0.) )
          mat)
-      n (x + 1) y
+      size (x + 1) y
 
 (** [basic_matrix n] creates a basic [n] by [n] matrix with each entry holding 4
     zero vectors. *)
@@ -86,11 +74,11 @@ let display_matrix mat x y size =
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 10) x_hold y_hold
+      display_matrix_helper (x - size) (y + 5) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 15 15;
-      display_matrix_helper (x + 10) y x_hold y_hold)
+      fill_rect x y 5 5;
+      display_matrix_helper (x + 5) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
