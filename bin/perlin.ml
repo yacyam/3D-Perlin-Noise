@@ -84,6 +84,9 @@ let display_matrix mat x y size =
 
 let gray_matrix n = Matrix.basic_matrix n n (rgb 255 255 255)
 
+(** [pixel_mat rgb_mat d_mat x y size] returns a matrix [rgb_mat] that's the
+    Main.ml noise function applied to the distance vectors in each entry of
+    [d_mat] *)
 let rec pixel_mat rgb_mat d_mat x y size =
   if x >= size then pixel_mat rgb_mat d_mat 0 (y + 1) size
   else if y >= size then rgb_mat
@@ -95,6 +98,8 @@ let rec pixel_mat rgb_mat d_mat x y size =
          rgb_mat)
       d_mat (x + 1) y size
 
+(** [grid x y size] creates a grid of size [size] on the screen starting from
+    the [x] and [y] positions until the entire screen size is filled. *)
 let rec grid x y size =
   if y >= snd scn_size then ()
   else if x >= fst scn_size then grid 0 (y + size) size
