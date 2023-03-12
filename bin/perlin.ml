@@ -8,6 +8,18 @@ let () = set_window_title "Basic Starter Code"
 let () = resize_window 600 600
 let scn_size = (size_x (), size_y ())
 
+let fstt = function
+  | x, _, _, _ -> x
+
+let sndd = function
+  | _, x, _, _ -> x
+
+let thrd = function
+  | _, _, x, _ -> x
+
+let frth = function
+  | _, _, _, x -> x
+
 (** [distance_matrix mat n x y] creates a matrix of distances to each pixel
     scaled by 1 over [n], as [n] denotes the size of the screen. For each row of
     the matrix, each entry holds the distance from the TOP LEFT, TOP RIGHT,
@@ -26,7 +38,7 @@ let rec distance_matrix mat n x y :
          ( (*TL*)
            (x_dist, y_dist -. 1.0, 0.),
            (*TR*)
-           (x_dist -. 1.0, y_dist -. 1.0, 0.),
+           (x_dist -. 1.0, y_dist +. 1.0, 0.),
            (*BL*)
            (x_dist, y_dist, 0.),
            (*BR*)
@@ -44,7 +56,7 @@ let basic_matrix n : (vector * vector * vector * vector) Matrix.matrix =
     noise) and outputs a grayscale rgb value based on the range the value [x]
     encompassed.*)
 let convert_grayscale x =
-  let scaled_x = mod_float (x *. 1000.) 255.0 in
+  let scaled_x = mod_float (x *. 10000.) 255.0 in
   if scaled_x <= 13.0 then rgb 13 13 13
   else if scaled_x <= 26.0 then rgb 26 26 26
   else if scaled_x <= 40.0 then rgb 40 40 40
@@ -74,22 +86,35 @@ let display_matrix mat x y size =
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 5) x_hold y_hold
+      display_matrix_helper (x - size) (y + 10) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 5 5;
-      display_matrix_helper (x + 5) y x_hold y_hold)
+      fill_rect x y 15 15;
+      display_matrix_helper (x + 10) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
-let gray_matrix f n = Matrix.basic_matrix n n (rgb f f f)
+let gray_matrix n = Matrix.basic_matrix n n (rgb 255 255 255)
+
+let rec pixel_mat rgb_mat d_mat x y size =
+  if x >= size then pixel_mat rgb_mat d_mat 0 (y + 1) size
+  else if y >= size then rgb_mat
+  else
+    pixel_mat
+      (Matrix.add_entry y x
+         (Matrix.get_entry y x d_mat |> Main.gradient_of_pixel
+        |> convert_grayscale)
+         rgb_mat)
+      d_mat (x + 1) y size
 
 let rec grid x y size =
-  if y > snd scn_size then ()
-  else if x > fst scn_size then grid 0 (y + size) size
-  else (
-    display_matrix (gray_matrix (Random.int 255) size) x y size;
-    grid (x + size) y size)
+  if y >= snd scn_size then ()
+  else if x >= fst scn_size then grid 0 (y + size) size
+  else
+    let dmat = distance_matrix (basic_matrix size) size 0 0 in
+    let rgb_mat = pixel_mat (gray_matrix size) dmat 0 0 size in
+    display_matrix rgb_mat x y size;
+    grid (x + size) y size
 
 let () = Random.self_init ()
-let () = grid 0 0 10
+let () = grid 0 0 600
