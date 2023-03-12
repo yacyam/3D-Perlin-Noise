@@ -301,8 +301,8 @@ let dot_grad_dist (random : int) (distance_vector : vector) : float =
     a certain pixel on the grid. It does this four times for each corner and
     takes dot product for each and then interpolates to get a final value. *)
 let gradient_of_pixel (pixel_pos_1, pixel_pos_2, pixel_pos_3, pixel_pos_4) =
-  let x_float = get_x pixel_pos_3 in
-  let y_float = get_y pixel_pos_3 in
+  let x_float = get_x pixel_pos_3 *. 0.01 in
+  let y_float = get_y pixel_pos_3 *. 0.01 in
   let x_pos = Int.abs (Float.to_int x_float) in
   let y_pos = Int.abs (Float.to_int y_float) in
   (* TL *)
@@ -319,8 +319,8 @@ let gradient_of_pixel (pixel_pos_1, pixel_pos_2, pixel_pos_3, pixel_pos_4) =
   let g4_final = List.nth random_values ((g4 + y_pos) mod 256) mod 4 in
   let frac_x = x_float -. Float.floor x_float in
   let frac_y = y_float -. Float.floor y_float in
-  let d1 = dot_grad_dist g1_final pixel_pos_1 in
-  let d2 = dot_grad_dist g2_final pixel_pos_2 in
-  let d3 = dot_grad_dist g3_final pixel_pos_3 in
-  let d4 = dot_grad_dist g4_final pixel_pos_4 in
+  let d1 = dot_grad_dist g1_final (frac_x, frac_y -. 1., 0.) in
+  let d2 = dot_grad_dist g2_final (frac_x -. 1., frac_y -. 1., 0.) in
+  let d3 = dot_grad_dist g3_final (frac_x, frac_y, 0.) in
+  let d4 = dot_grad_dist g4_final (frac_x -. 1., frac_y, 0.) in
   interpolate d1 d2 d3 d4 frac_x frac_y

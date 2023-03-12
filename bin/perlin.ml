@@ -18,19 +18,20 @@ let rec distance_matrix mat size x y :
     (vector * vector * vector * vector) Matrix.matrix =
   let x_dist = float_of_int x in
   let y_dist = float_of_int y in
+  let f_size = float_of_int size in
   if y >= size then mat
   else if x >= size then distance_matrix mat size 0 (y + 1)
   else
     distance_matrix
       (Matrix.add_entry y x
          ( (*TL*)
-           (x_dist, y_dist -. 1.0, 0.),
+           (x_dist, y_dist -. f_size, 0.),
            (*TR*)
-           (x_dist -. 1.0, y_dist +. 1.0, 0.),
+           (x_dist -. f_size, y_dist +. f_size, 0.),
            (*BL*)
            (x_dist, y_dist, 0.),
            (*BR*)
-           (x_dist -. 1.0, y_dist, 0.) )
+           (x_dist -. f_size, y_dist, 0.) )
          mat)
       size (x + 1) y
 
@@ -44,7 +45,7 @@ let basic_matrix n : (vector * vector * vector * vector) Matrix.matrix =
     noise) and outputs a grayscale rgb value based on the range the value [x]
     encompassed.*)
 let convert_grayscale x =
-  let scaled_x = mod_float (x *. 10000.) 255.0 in
+  let scaled_x = (x +. 1.) /. 2. *. 255.0 in
   if scaled_x <= 13.0 then rgb 13 13 13
   else if scaled_x <= 26.0 then rgb 26 26 26
   else if scaled_x <= 40.0 then rgb 40 40 40
@@ -74,11 +75,11 @@ let display_matrix mat x y size =
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 5) x_hold y_hold
+      display_matrix_helper (x - size) (y + 1) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 5 5;
-      display_matrix_helper (x + 5) y x_hold y_hold)
+      fill_rect x y 1 1;
+      display_matrix_helper (x + 1) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
