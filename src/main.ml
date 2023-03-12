@@ -55,7 +55,12 @@ let dot_grad_dist (random : int) (distance_vector : vector) : float =
   else if random = 3 then dot (-1.0, -1.0, 0.0) distance_vector
   else 0.0
 
-(** [gradient_of_pixel] is the final color value of a pixel. *)
+(** [gradient_of_pixel] is the final color value of a pixel. It takes in
+    [pixel_pos] which is a vector of a value that the user enters and this
+    vector will be the grid "location". It then takes the fractional parts of
+    this to get the distance vector from a random gradient vector on the grid to
+    a certain pixel on the grid. It does this four times for each corner and
+    takes dot product for each and then interpolates to get a final value. *)
 let gradient_of_pixel (pixel_pos : vector) =
   let x_float = get_x pixel_pos in
   let y_float = get_y pixel_pos in
