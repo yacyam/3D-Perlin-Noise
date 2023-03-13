@@ -8,12 +8,12 @@ let () = set_window_title "Basic Starter Code"
 let () = resize_window 600 600
 let scn_size = (size_x (), size_y ())
 
-(** [distance_matrix mat n x y] creates a matrix of distances to each pixel
-    scaled by 1 over [n], as [n] denotes the size of the screen. For each row of
-    the matrix, each entry holds the distance from the TOP LEFT, TOP RIGHT,
-    BOTTOM LEFT, and BOTTOM RIGHT based on the [x] and [y] position of pixel.
+(** [distance_matrix mat size x y] creates a matrix of distances to each pixel
+    defined by the [size] of the screen. For each row of the matrix, each entry
+    holds the distance from the TOP LEFT, TOP RIGHT, BOTTOM LEFT, and BOTTOM
+    RIGHT based on the [x] and [y] position of pixel.
 
-    Requires: [mat] must be an [n] by [n] matrix. *)
+    Requires: [mat] must be a [size] by [size] matrix. *)
 let rec distance_matrix mat size x y :
     (vector * vector * vector * vector) Matrix.matrix =
   let x_dist = float_of_int x in

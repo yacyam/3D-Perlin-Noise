@@ -264,7 +264,7 @@ let random_values =
     205;
   ]
 
-(** [smooth] is the result of apply the function (6n^2) - (15n^4) + (10n^3) to
+(** [smooth] is the result of apply the function (6n^5) - (15n^4) + (10n^3) to
     [n]. The resulting n will be used in interpolation.*)
 let smooth n =
   let poly_1 = n *. n *. n *. n *. n *. 6.0 in
