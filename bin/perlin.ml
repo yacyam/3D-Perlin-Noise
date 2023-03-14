@@ -16,24 +16,34 @@ let scn_size = (size_x (), size_y ())
     Requires: [mat] must be a [size] by [size] matrix. *)
 let rec distance_matrix mat size x y :
     (vector * vector * vector * vector) Matrix.matrix =
-  let x_dist = float_of_int x in
-  let y_dist = float_of_int y in
-  let f_size = float_of_int size in
-  if y >= size then mat
-  else if x >= size then distance_matrix mat size 0 (y + 1)
-  else
-    distance_matrix
-      (Matrix.add_entry y x
-         ( (*TL*)
-           (x_dist, y_dist -. f_size, 0.),
-           (*TR*)
-           (x_dist -. f_size, y_dist +. f_size, 0.),
-           (*BL*)
-           (x_dist, y_dist, 0.),
-           (*BR*)
-           (x_dist -. f_size, y_dist, 0.) )
-         mat)
-      size (x + 1) y
+  (* This helper only allows for a distance matrix of [size] by [size] to be
+     created, as if we start at some x and y position on screen where it's not 0
+     0, then we have to hold the initial x and y positions, and then iterate
+     [size] times until our initial [x] and [y] pos are incremented by the size
+     given. Helps to increase performance tenfold to not create one huge mat. *)
+  let rec distance_matrix_helper mat x y x_hold y_hold =
+    let x_dist = float_of_int x in
+    let y_dist = float_of_int y in
+    let f_size = float_of_int size in
+    if y - y_hold >= size then mat
+    else if x - x_hold >= size then
+      (* Go up by a row *)
+      distance_matrix_helper mat x_hold (y + 1) x_hold y_hold
+    else
+      distance_matrix_helper
+        (Matrix.add_entry (y - y_hold) (x - x_hold)
+           ( (*TL*)
+             (x_dist, y_dist -. f_size, 0.),
+             (*TR*)
+             (x_dist -. f_size, y_dist +. f_size, 0.),
+             (*BL*)
+             (x_dist, y_dist, 0.),
+             (*BR*)
+             (x_dist -. f_size, y_dist, 0.) )
+           mat)
+        (x + 1) y x_hold y_hold
+  in
+  distance_matrix_helper mat x y x y
 
 (** [basic_matrix n] creates a basic [n] by [n] matrix with each entry holding 4
     zero vectors. *)
@@ -60,8 +70,8 @@ let display_matrix mat x y size =
       display_matrix_helper (x - size) (y + 1) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 5 5;
-      display_matrix_helper (x + 5) y x_hold y_hold)
+      fill_rect x y 1 1;
+      display_matrix_helper (x + 1) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
@@ -87,10 +97,10 @@ let rec grid x y size =
   if y >= snd scn_size then ()
   else if x >= fst scn_size then grid 0 (y + size) size
   else
-    let dmat = distance_matrix (basic_matrix size) size 0 0 in
+    let dmat = distance_matrix (basic_matrix size) size x y in
     let rgb_mat = pixel_mat (gray_matrix size) dmat 0 0 size in
     display_matrix rgb_mat x y size;
     grid (x + size) y size
 
 let () = Random.self_init ()
-let () = grid 0 0 600
+let () = grid 0 0 100
