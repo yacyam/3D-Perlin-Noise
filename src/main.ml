@@ -278,12 +278,12 @@ let interpolate upper_left upper_right lower_left lower_right frac_x frac_y =
   let smooth_x = smooth frac_x in
   let smooth_y = smooth frac_y in
   let interpolate_1 =
-    upper_right -. upper_left |> ( *. ) smooth_y |> ( +. ) upper_left
+    upper_right -. upper_left |> ( *. ) smooth_x |> ( +. ) upper_left
   in
   let interpolate_2 =
-    lower_right -. lower_left |> ( *. ) smooth_y |> ( +. ) lower_left
+    lower_right -. lower_left |> ( *. ) smooth_x |> ( +. ) lower_left
   in
-  interpolate_2 -. interpolate_1 |> ( *. ) smooth_x |> ( +. ) interpolate_1
+  interpolate_1 -. interpolate_2 |> ( *. ) smooth_y |> ( +. ) interpolate_2
 
 (** [dot_grad_dist] is the dot product of a [distane_vector] and a gradient
     vector that is chosen based on [random] value when called in
