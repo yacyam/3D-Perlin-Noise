@@ -2,6 +2,7 @@ open OUnit2
 open Linearalg
 open Matrix
 open Vector
+open Main
 
 (** [get_x_test name input expected_output] constructs an OUnit test named
     [name] that asserts the quality of [expected_output] with [get_x input]. *)
@@ -309,7 +310,41 @@ let matrix_tests =
       get_entry_tests;
     ]
 
+let dot_grad_dist_test (name : string) (random : int) (distance_vector : vector)
+    (expected_output : float) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (Float.round (dot_grad_dist random distance_vector *. 100.) /. 100.)
+    ~printer:string_of_float
+
+let dot_grad_dist_tests =
+  [
+    dot_grad_dist_test "not_rotated" 0 (2., 5., 0.) 7.;
+    dot_grad_dist_test "rotated pi/2" 1 (-10.2, -4., 0.) 6.2;
+    dot_grad_dist_test "rotated pi" 3 (-9.2, 2., 0.) 7.2;
+    dot_grad_dist_test "rotated 3pi/2" 2 (1.3, -2., 0.) 3.3;
+  ]
+
+let interpolate_test (name : string) (u_l : float) (u_r : float) (l_l : float)
+    (l_r : float) (frac_x : float) (frac_y : float) (expected_output : float) :
+    test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (Float.round (interpolate u_l u_r l_l l_r frac_x frac_y *. 100.) /. 100.)
+    ~printer:string_of_float
+
+let interpolate_tests =
+  [
+    interpolate_test "0.5 fracs" 7. 1. 2. (-3.) 0.5 0.5 1.75;
+    interpolate_test "0.4 frac 0.1 frac" 6.2 1.2 0.3 1.1 0.4 0.1 0.59;
+    interpolate_test "1.0 fracs" 7.2 (-3.3) (-4.0) (-2.1) 1.0 1.0 (-3.3);
+    interpolate_test "0. fracs" 3.3 4.4 5.5 6.6 0. 0. 5.5;
+  ]
+
+let main_tests = List.flatten [ dot_grad_dist_tests; interpolate_tests ]
+
 let suite =
-  "test suite for project" >::: List.flatten [ vector_tests; matrix_tests ]
+  "test suite for project"
+  >::: List.flatten [ vector_tests; matrix_tests; main_tests ]
 
 let _ = run_test_tt_main suite
