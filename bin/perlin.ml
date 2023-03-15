@@ -103,4 +103,4 @@ let rec grid x y size =
     grid (x + size) y size
 
 let () = Random.self_init ()
-let () = grid 0 0 100
+let () = grid 0 0 50
