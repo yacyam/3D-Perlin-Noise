@@ -13,7 +13,7 @@ let gen_random_values =
     | 0 -> acc
     | size -> loop (int_of_float (floor (Random.float 255.9)) :: acc) (size - 1)
   in
-  loop [] 255
+  loop [] 256
 
 let random_values = gen_random_values
 
