@@ -1,0 +1,24 @@
+---
+# Members of your group.
+group:
+  - name: Yacqub Mohamed
+    netid: yam22
+  - name: Mitch Verhelle
+    netid: mbv27
+  - name: Harriet Kumah
+    netid: hak68
+# Your PM.
+pm:
+  name: David Han
+  netid: dmh338
+# Set to false if you don't want your gallery entry to be public.
+publish: true
+# Pithy title
+title: "Interactive Perlin Noise Generator"
+# OK if this is a Cornell Github link, but public gallery viewers won't be able to see it.
+git-repo: "https://github.coecis.cornell.edu/yam22/cs-3110-final-project"
+# If you have no demo screencast, replace the url string with an empty string ""
+demo-video-url: ""
+# Write a short, attention-grabbing description of your project.
+desc: >
+  Will finish

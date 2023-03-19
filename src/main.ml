@@ -3,7 +3,7 @@ open Vector
 
 (** [gen_random_values] Tail recursively generates a random vector of size 255
     with integers in range 0-255 for the perlin noise map *)
-let gen_random_values =
+let gen_random_values () =
   Random.self_init ();
   let rec loop acc = function
     | 0 -> acc
@@ -11,7 +11,7 @@ let gen_random_values =
   in
   loop [] 256
 
-let random_values = gen_random_values
+let random_values = gen_random_values ()
 
 (** [smooth] is the result of apply the function (6n^5) - (15n^4) + (10n^3) to
     [n]. The resulting n will be used in interpolation.*)

@@ -2,9 +2,8 @@ open Graphics
 open Linearalg
 open Vector
 
-(* THIS IS JUST A TEST OF THE GRAPHICS LIBRARY *)
 let _ = open_graph ""
-let () = set_window_title "Basic Starter Code"
+let () = set_window_title "Perlin Noise"
 let () = resize_window 1000 600
 let scn_size = (size_x () - 400, size_y ())
 
@@ -67,11 +66,11 @@ let display_matrix mat x y size =
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 5) x_hold y_hold
+      display_matrix_helper (x - size) (y + 1) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 5 5;
-      display_matrix_helper (x + 5) y x_hold y_hold)
+      fill_rect x y 1 1;
+      display_matrix_helper (x + 1) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
@@ -91,40 +90,76 @@ let rec pixel_mat rgb_mat d_mat x y size =
          rgb_mat)
       d_mat (x + 1) y size
 
-let test_loop x y =
-  set_color (rgb 12 12 12);
+(** [draw_interface x y] draws the text interface and interactive buttons
+    starting at the [x] and [y] positions *)
+let draw_interface x y =
+  set_color blue;
+  moveto (x - 5) (y + 180);
+  (* https://openclassrooms.com/forum/sujet/ocaml-changer-la-taille-du-texte-avec-graphics
+     For some reason text_size was never implemented, so you have to use a
+     specific font string to change the size *)
+  set_font "-*-fixed-medium-r-normal--70-*-*-*-*-*-iso8859-1";
+  draw_string "CHOOSE";
+  moveto (x + 20) (y + 130);
+  draw_string "YOUR";
+  moveto (x + 10) (y + 80);
+  draw_string "NOISE";
+  (* ColNoise Button *)
+  set_color red;
   draw_rect x y 80 50;
   moveto (x + 10) (y + 30);
   set_font "-*-fixed-medium-r-normal--15-*-*-*-*-*-iso8859-1";
   draw_string "Colored";
   moveto (x + 18) (y + 10);
   draw_string "Noise";
-
-  moveto (x + 110) (y + 30);
+  (* Perlin Button *)
+  set_color magenta;
+  moveto (x + 113) (y + 30);
   draw_rect (x + 100) y 80 50;
-  draw_string "Regular";
+  draw_string "Perlin";
   moveto (x + 118) (y + 10);
   draw_string "Noise";
-
+  (* Fractal Button *)
+  set_color blue;
   moveto (x + 60) (y - 30);
   draw_rect (x + 50) (y - 60) 80 50;
   draw_string "Fractal";
   moveto (x + 66) (y - 50);
   draw_string "Noise";
-  let rec loop _ =
-    match wait_next_event [ Button_down; Button_up ] with
-    | { mouse_x; mouse_y } ->
-        if
-          mouse_x >= x && mouse_x <= x + 80 && mouse_y >= y && mouse_y <= y + 50
-        then clear_graph ()
-        else loop ()
-  in
-  loop ()
+  (* Exit Button *)
+  set_color black;
+  fill_rect (size_x () - 100) 10 80 50;
+  set_color white;
+  moveto (size_x () - 87) 22;
+  set_font "-*-fixed-medium-r-normal--25-*-*-*-*-*-iso8859-1";
+  draw_string "EXIT"
+
+(** [in_range x y start_x start_y] checks if x and y are within a 80 by 50
+    (button size) rectangle range starting at [start_x] and [start_y] *)
+let in_range x y start_x start_y =
+  x >= start_x && x <= start_x + 80 && y >= start_y && y <= start_y + 50
 
 (** [grid x y size] creates a grid of size [size] on the screen starting from
-    the [x] and [y] positions until the entire screen size is filled. *)
+    the [x] and [y] positions until the specified screen size is filled. *)
 let rec grid x y size =
-  if y >= snd scn_size then test_loop 750 250
+  if y >= snd scn_size then (
+    draw_interface 700 250;
+    let rec loop _ =
+      match wait_next_event [ Button_down ] with
+      | { mouse_x; mouse_y } ->
+          (* Colored Noise*)
+          if in_range mouse_x mouse_y 700 250 then clear_graph ()
+          else if in_range mouse_x mouse_y 800 250 then (
+            clear_graph ();
+            grid 0 0 size)
+          else if in_range mouse_x mouse_y 750 190 then
+            (* Fractal Noise *)
+            clear_graph ()
+          else if in_range mouse_x mouse_y (size_x () - 100) 10 then
+            close_graph ()
+          else loop ()
+    in
+    loop ())
   else if x >= fst scn_size then grid 0 (y + size) size
   else
     let dmat = distance_matrix (basic_matrix size) size x y in
@@ -133,6 +168,4 @@ let rec grid x y size =
     grid (x + size) y size
 
 let () = Random.self_init ()
-
-(* let () = grid 0 0 50 *)
-let () = test_loop 750 250
+let () = grid 0 0 50
