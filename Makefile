@@ -12,3 +12,6 @@ test:
 clean:
 	dune clean
 
+doc:
+	dune build @doc
+

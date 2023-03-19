@@ -5,8 +5,8 @@ open Vector
 (* THIS IS JUST A TEST OF THE GRAPHICS LIBRARY *)
 let _ = open_graph ""
 let () = set_window_title "Basic Starter Code"
-let () = resize_window 600 600
-let scn_size = (size_x (), size_y ())
+let () = resize_window 1000 600
+let scn_size = (size_x () - 400, size_y ())
 
 (** [distance_matrix mat size x y] creates a matrix of distances to each pixel
     defined by the [size] of the screen. For each row of the matrix, each entry
@@ -67,11 +67,11 @@ let display_matrix mat x y size =
   let rec display_matrix_helper x y x_hold y_hold =
     if y_hold + size <= y then ()
     else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 1) x_hold y_hold
+      display_matrix_helper (x - size) (y + 5) x_hold y_hold
     else (
       set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 1 1;
-      display_matrix_helper (x + 1) y x_hold y_hold)
+      fill_rect x y 5 5;
+      display_matrix_helper (x + 5) y x_hold y_hold)
   in
   display_matrix_helper x y x y
 
@@ -91,10 +91,40 @@ let rec pixel_mat rgb_mat d_mat x y size =
          rgb_mat)
       d_mat (x + 1) y size
 
+let test_loop x y =
+  set_color (rgb 12 12 12);
+  draw_rect x y 80 50;
+  moveto (x + 10) (y + 30);
+  set_font "-*-fixed-medium-r-normal--15-*-*-*-*-*-iso8859-1";
+  draw_string "Colored";
+  moveto (x + 18) (y + 10);
+  draw_string "Noise";
+
+  moveto (x + 110) (y + 30);
+  draw_rect (x + 100) y 80 50;
+  draw_string "Regular";
+  moveto (x + 118) (y + 10);
+  draw_string "Noise";
+
+  moveto (x + 60) (y - 30);
+  draw_rect (x + 50) (y - 60) 80 50;
+  draw_string "Fractal";
+  moveto (x + 66) (y - 50);
+  draw_string "Noise";
+  let rec loop _ =
+    match wait_next_event [ Button_down; Button_up ] with
+    | { mouse_x; mouse_y } ->
+        if
+          mouse_x >= x && mouse_x <= x + 80 && mouse_y >= y && mouse_y <= y + 50
+        then clear_graph ()
+        else loop ()
+  in
+  loop ()
+
 (** [grid x y size] creates a grid of size [size] on the screen starting from
     the [x] and [y] positions until the entire screen size is filled. *)
 let rec grid x y size =
-  if y >= snd scn_size then ()
+  if y >= snd scn_size then test_loop 750 250
   else if x >= fst scn_size then grid 0 (y + size) size
   else
     let dmat = distance_matrix (basic_matrix size) size x y in
@@ -103,4 +133,6 @@ let rec grid x y size =
     grid (x + size) y size
 
 let () = Random.self_init ()
-let () = grid 0 0 50
+
+(* let () = grid 0 0 50 *)
+let () = test_loop 750 250

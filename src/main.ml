@@ -1,10 +1,6 @@
 open Matrix
 open Vector
 
-(** THIS IS UNCOMMENTED FOR FORMATTING REASONS (OCAML FORMATS THE LIST TO BE
-    VERTICAL!). So uncomment this list if you are testing out code and delete
-    the mock list right under it.*)
-
 (** [gen_random_values] Tail recursively generates a random vector of size 255
     with integers in range 0-255 for the perlin noise map *)
 let gen_random_values =
