@@ -7,6 +7,14 @@ let () = set_window_title "Perlin Noise"
 let () = resize_window 1000 600
 let scn_size = (size_x () - 400, size_y ())
 
+(** [normalize size (p1, p2, p3, p4)] is for normalizing the lengths of the
+    distance vectors to be in range 0..1 *)
+let normalize size (p1, p2, p3, p4) =
+  ( (get_x p1 /. sqrt 2., get_y p1 /. sqrt 2., get_z p1 /. sqrt 2.),
+    (get_x p2 /. sqrt 2., get_y p2 /. sqrt 2., get_z p2 /. sqrt 2.),
+    (get_x p3 /. sqrt 2., get_y p3 /. sqrt 2., get_z p3 /. sqrt 2.),
+    (get_x p4 /. sqrt 2., get_y p4 /. sqrt 2., get_z p4 /. sqrt 2.) )
+
 (** [distance_matrix mat size x y] creates a matrix of distances to each pixel
     defined by the [size] of the screen. For each row of the matrix, each entry
     holds the distance from the TOP LEFT, TOP RIGHT, BOTTOM LEFT, and BOTTOM
@@ -31,14 +39,15 @@ let rec distance_matrix mat size x y :
     else
       distance_matrix_helper
         (Matrix.add_entry (y - y_hold) (x - x_hold)
-           ( (*TL*)
-             (x_dist, y_dist -. f_size, 0.),
-             (*TR*)
-             (x_dist -. f_size, y_dist +. f_size, 0.),
-             (*BL*)
-             (x_dist, y_dist, 0.),
-             (*BR*)
-             (x_dist -. f_size, y_dist, 0.) )
+           (( (*TL*)
+              (x_dist, y_dist -. f_size, 0.),
+              (*TR*)
+              (x_dist -. f_size, y_dist +. f_size, 0.),
+              (*BL*)
+              (x_dist, y_dist, 0.),
+              (*BR*)
+              (x_dist -. f_size, y_dist, 0.) )
+           |> normalize size)
            mat)
         (x + 1) y x_hold y_hold
   in
@@ -54,8 +63,61 @@ let basic_matrix n : (vector * vector * vector * vector) Matrix.matrix =
     noise) and outputs a grayscale rgb value based on the range the value [x]
     encompassed.*)
 let convert_grayscale x =
-  let scaled_x = Int.abs (int_of_float ((x +. 1.) /. 2. *. 255.0)) in
+  let scaled_x = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.0)) in
   rgb scaled_x scaled_x scaled_x
+
+(** [convert_bluegreenscale x] takes in a float (random number generated from
+    perlin noise) and outputs a blue-green rgb scaled value based on [x]. x
+    should be in 0..1 or very close to it. *)
+let convert_bluegreenscale x =
+  let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
+  rgb 0 x_prime (255 - x_prime)
+
+(** [convert_landmass x] takes in a float (random number generated from perlin
+    noise) and outputs a blue or green rgb scaled value based on [x]. x should
+    be in 0..1 or very close to it. If x is small enough, it outputs a blue
+    scale value, otherwise it's green scale. *)
+let convert_landscape x =
+  let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
+  if x_prime < 100 then
+    rgb 0 0
+      (40 + int_of_float (Float.round (float_of_int x_prime *. (215. /. 100.))))
+  else if x_prime > 110 then
+    rgb
+      (int_of_float
+         (10. -. Float.round (float_of_int (x_prime - 110) *. (10. /. 145.))))
+      (int_of_float
+         (Float.round
+            (160. -. (float_of_int (x_prime - 110) *. (160. /. 145.)) +. 50.)))
+      (int_of_float
+         (60. -. Float.round (float_of_int (x_prime - 110) *. (60. /. 145.))))
+  else
+    let r, g, b =
+      ( Int.abs
+          (int_of_float
+             (((float_of_int x_prime -. 100.) *. (60. /. 10.)) +. 180.)),
+        Int.abs
+          (int_of_float
+             (((float_of_int x_prime -. 100.) *. (40. /. 10.)) +. 188.)),
+        Int.abs
+          (int_of_float
+             (((float_of_int x_prime -. 100.) *. (20. /. 10.)) +. 153.)) )
+    in
+    rgb r g b
+
+(** [convert_brownscale x] takes in a float (random number generated from perlin
+    noise) and outputs a brown rgb scaled value based on [x]. x should be in
+    0..1 or very close to it. *)
+let convert_wood x =
+  let x_prime = (x +. 0.95) /. 2. in
+  if int_of_float (Float.round (x_prime *. 100.)) mod 4 = 0 then rgb 166 99 64
+  else
+    let r, g, b =
+      ( Int.abs (int_of_float (x_prime *. 166.)),
+        Int.abs (int_of_float (x_prime *. 99.)),
+        Int.abs (int_of_float (x_prime *. 64.)) )
+    in
+    rgb r g b
 
 (** [display_matrix mat x y size] displays the matrix entries at the specified x
     and y coordinates on the screen, bounded by the [size] which is specified by
@@ -139,6 +201,62 @@ let draw_interface x y =
 let in_range x y start_x start_y =
   x >= start_x && x <= start_x + 80 && y >= start_y && y <= start_y + 50
 
+let rec fbm acc d_mat y x freq amp n_octaves =
+  if n_octaves = 0 then acc
+  else
+    let value =
+      Matrix.get_entry y x d_mat
+      |> Main.gradient_of_pixel_fbm freq
+      |> ( *. ) amp |> ( +. ) acc
+    in
+    fbm value d_mat y x (freq *. 2.) (amp *. 0.5) (n_octaves - 1)
+
+(** [pixel_mat_fbm rgb_mat d_mat x y size freq amp] returns a matrix [rgb_mat]
+    that's the Main.ml noise function applied to the distance vectors in each
+    entry of [d_mat] *)
+let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize =
+  if x >= size then
+    pixel_mat_fbm rgb_mat d_mat 0 (y + 1) size n_octaves colorize
+  else if y >= size then rgb_mat
+  else
+    pixel_mat_fbm
+      (Matrix.add_entry y x
+         (fbm 0. d_mat y x 0.005 1. n_octaves |> colorize)
+         rgb_mat)
+      d_mat (x + 1) y size n_octaves colorize
+
+(** [grid x y size] creates a grid of size [size] on the screen starting from
+    the [x] and [y] positions until the specified screen size is filled. *)
+let rec grid_fbm x y size n_octaves colorize =
+  if y >= snd scn_size then (
+    draw_interface 700 250;
+    let rec loop _ =
+      match wait_next_event [ Button_down ] with
+      | { mouse_x; mouse_y } ->
+          (* Colored Noise*)
+          if in_range mouse_x mouse_y 700 250 then clear_graph ()
+          else if in_range mouse_x mouse_y 800 250 then (
+            clear_graph ();
+            grid_fbm 0 0 size n_octaves colorize)
+          else if in_range mouse_x mouse_y 750 190 then
+            (* Fractal Noise *)
+            clear_graph ()
+          else if in_range mouse_x mouse_y (size_x () - 100) 10 then
+            close_graph ()
+          else loop ()
+    in
+    loop ())
+  else if x >= fst scn_size then grid_fbm 0 (y + size) size n_octaves colorize
+  else
+    let dmat = distance_matrix (basic_matrix size) size x y in
+    let rgb_mat =
+      pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize
+    in
+    display_matrix rgb_mat x y size;
+    grid_fbm (x + size) y size n_octaves colorize
+
+let add_perlin_layer previous_layers index = previous_layers
+
 (** [grid x y size] creates a grid of size [size] on the screen starting from
     the [x] and [y] positions until the specified screen size is filled. *)
 let rec grid x y size =
@@ -168,4 +286,4 @@ let rec grid x y size =
     grid (x + size) y size
 
 let () = Random.self_init ()
-let () = grid 0 0 50
+let () = grid_fbm 0 0 50 6 convert_wood

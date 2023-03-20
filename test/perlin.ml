@@ -40,6 +40,22 @@ let magnitude_test (name : string) (input : vector) (expected_output : float) :
   name >:: fun _ ->
   assert_equal expected_output (magnitude input) ~printer:string_of_float
 
+(** [norm_magnitude_test name input] constructs an OUnit test named [name] that
+    asserts the property that [norm input] is a unit vector holds. *)
+let norm_magnitude_test (name : string) (input : vector) : test =
+  name >:: fun _ ->
+  assert_equal 1.
+    (Float.round (norm input |> magnitude) *. 100000. /. 100000.)
+    ~printer:string_of_float
+
+(** [norm_angle_test name input] constructs an OUnit test named [name] that
+    asserts the property that [norm input] is parallel to [input] holds. *)
+let norm_angle_test (name : string) (input : vector) : test =
+  name >:: fun _ ->
+  assert_equal 0.
+    (Float.round (norm input |> cross input |> magnitude) *. 100000. /. 100000.)
+    ~printer:string_of_float
+
 (*(** [angle_test name (input1, input2) expected_output] constructs an OUnit
   test named [name] that asserts the quality of [expected_output] with [angle
   input1 input2]. *) let angle_test (name : string) ((input1, input2) : vector *
@@ -95,6 +111,14 @@ let magnitude_tests =
     magnitude_test "mixed positive and negative" (-8.1, 1.3, -2.5) (sqrt 73.55);
   ]
 
+let norm_tests =
+  [
+    norm_magnitude_test "unit property of norm" (1., 2., 0.);
+    norm_angle_test "norm preserves angle" (1., 2., 0.);
+    norm_magnitude_test "unit property of norm" (2.1, -122., 0.52);
+    norm_angle_test "norm preserves angle" (2.1, -122., 0.52);
+  ]
+
 (*let angle_tests = [ angle_test "zero" ((0., 0., 0.), (0., 0., 0.)) 0.;
   angle_test "positive" ((2., 1., 0.5), (1., 3., 2.)) 0.; angle_test "negative"
   ((), ()) 0.; angle_test "irrationals" ((), ()) 0.; angle_test "mixed positive
@@ -102,7 +126,14 @@ let magnitude_tests =
 
 let vector_tests =
   List.flatten
-    [ get_x_tests; get_y_tests; get_z_tests; dot_tests; magnitude_tests ]
+    [
+      get_x_tests;
+      get_y_tests;
+      get_z_tests;
+      dot_tests;
+      magnitude_tests;
+      norm_tests;
+    ]
 
 (******************************************************************************)
 (******************************************************************************)

@@ -73,3 +73,36 @@ let gradient_of_pixel (pixel_pos_1, pixel_pos_2, pixel_pos_3, pixel_pos_4) =
   let d3 = dot_grad_dist g3_final (frac_x, frac_y, 0.) in
   let d4 = dot_grad_dist g4_final (frac_x -. 1., frac_y, 0.) in
   interpolate d1 d2 d3 d4 frac_x frac_y
+
+(** [gradient_of_pixel_fbm pixel_positions freq] is the final color value of a
+    pixel. It takes in [pixel_pos] which is a vector of a value that the user
+    enters and this vector will be the grid "location". It then takes the
+    fractional parts of this to get the distance vector from a random gradient
+    vector on the grid to a certain pixel on the grid. It does this four times
+    for each corner and takes dot product for each and then interpolates to get
+    a final value. *)
+let gradient_of_pixel_fbm freq
+    (pixel_pos_1, pixel_pos_2, pixel_pos_3, pixel_pos_4) =
+  let x_float = get_x pixel_pos_3 *. freq in
+  let y_float = get_y pixel_pos_3 *. freq in
+  let x_pos = Int.abs (Float.to_int x_float) in
+  let y_pos = Int.abs (Float.to_int y_float) in
+  (* TL *)
+  let g1 = List.nth random_values (x_pos mod 256) in
+  let g1_final = List.nth random_values ((g1 + y_pos + 1) mod 256) mod 4 in
+  (* TR *)
+  let g2 = List.nth random_values ((x_pos + 1) mod 256) in
+  let g2_final = List.nth random_values ((g2 + y_pos + 1) mod 256) mod 4 in
+  (* BL *)
+  let g3 = List.nth random_values (x_pos mod 256) in
+  let g3_final = List.nth random_values ((g3 + y_pos) mod 256) mod 4 in
+  (* BR *)
+  let g4 = List.nth random_values ((x_pos + 1) mod 256) in
+  let g4_final = List.nth random_values ((g4 + y_pos) mod 256) mod 4 in
+  let frac_x = x_float -. Float.floor x_float in
+  let frac_y = y_float -. Float.floor y_float in
+  let d1 = dot_grad_dist g1_final (frac_x, frac_y -. 1., 0.) in
+  let d2 = dot_grad_dist g2_final (frac_x -. 1., frac_y -. 1., 0.) in
+  let d3 = dot_grad_dist g3_final (frac_x, frac_y, 0.) in
+  let d4 = dot_grad_dist g4_final (frac_x -. 1., frac_y, 0.) in
+  interpolate d1 d2 d3 d4 frac_x frac_y
