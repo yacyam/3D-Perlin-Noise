@@ -255,8 +255,6 @@ let rec grid_fbm x y size n_octaves colorize =
     display_matrix rgb_mat x y size;
     grid_fbm (x + size) y size n_octaves colorize
 
-let add_perlin_layer previous_layers index = previous_layers
-
 (** [grid x y size] creates a grid of size [size] on the screen starting from
     the [x] and [y] positions until the specified screen size is filled. *)
 let rec grid x y size =
