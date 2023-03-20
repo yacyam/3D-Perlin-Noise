@@ -152,9 +152,7 @@ let rec pixel_mat rgb_mat d_mat x y size =
          rgb_mat)
       d_mat (x + 1) y size
 
-(** [draw_interface x y] draws the text interface and interactive buttons
-    starting at the [x] and [y] positions *)
-let draw_interface x y =
+let draw_main_text x y =
   set_color blue;
   moveto (x - 5) (y + 180);
   (* https://openclassrooms.com/forum/sujet/ocaml-changer-la-taille-du-texte-avec-graphics
@@ -166,28 +164,7 @@ let draw_interface x y =
   draw_string "YOUR";
   moveto (x + 10) (y + 80);
   draw_string "NOISE";
-  (* ColNoise Button *)
-  set_color red;
-  draw_rect x y 80 50;
-  moveto (x + 10) (y + 30);
-  set_font "-*-fixed-medium-r-normal--15-*-*-*-*-*-iso8859-1";
-  draw_string "Colored";
-  moveto (x + 18) (y + 10);
-  draw_string "Noise";
-  (* Perlin Button *)
-  set_color magenta;
-  moveto (x + 113) (y + 30);
-  draw_rect (x + 100) y 80 50;
-  draw_string "Perlin";
-  moveto (x + 118) (y + 10);
-  draw_string "Noise";
-  (* Fractal Button *)
-  set_color blue;
-  moveto (x + 60) (y - 30);
-  draw_rect (x + 50) (y - 60) 80 50;
-  draw_string "Fractal";
-  moveto (x + 66) (y - 50);
-  draw_string "Noise";
+
   (* Exit Button *)
   set_color black;
   fill_rect (size_x () - 100) 10 80 50;
@@ -195,6 +172,25 @@ let draw_interface x y =
   moveto (size_x () - 87) 22;
   set_font "-*-fixed-medium-r-normal--25-*-*-*-*-*-iso8859-1";
   draw_string "EXIT"
+
+(** [draw_interface x y] draws the text interface and interactive buttons
+    starting at the [x] and [y] positions *)
+let draw_interface x y text =
+  (* Perlin Button *)
+  set_color red;
+  draw_rect x y 80 50;
+  moveto (x + 12) (y + 30);
+  set_font "-*-fixed-medium-r-normal--15-*-*-*-*-*-iso8859-1";
+  draw_string "Perlin";
+  moveto (x + 1) (y + 10);
+  draw_string text;
+  (* Fractal Button *)
+  set_color magenta;
+  moveto (x + 111) (y + 30);
+  draw_rect (x + 100) y 80 50;
+  draw_string "Fractal";
+  moveto (x + 101) (y + 10);
+  draw_string text
 
 (** [in_range x y start_x start_y] checks if x and y are within a 80 by 50
     (button size) rectangle range starting at [start_x] and [start_y] *)
@@ -229,18 +225,46 @@ let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize =
     the [x] and [y] positions until the specified screen size is filled. *)
 let rec grid_fbm x y size n_octaves colorize =
   if y >= snd scn_size then (
-    draw_interface 700 250;
+    draw_main_text 700 300;
+    draw_interface 700 300 "  Noise";
+    draw_interface 700 240 " Colored";
+    draw_interface 700 180 "Landscape";
+    draw_interface 700 120 "  Wood";
     let rec loop _ =
       match wait_next_event [ Button_down ] with
       | { mouse_x; mouse_y } ->
-          (* Colored Noise*)
-          if in_range mouse_x mouse_y 700 250 then clear_graph ()
-          else if in_range mouse_x mouse_y 800 250 then (
+          if in_range mouse_x mouse_y 700 300 then (
+            (* Perlin Noise *)
             clear_graph ();
-            grid_fbm 0 0 size n_octaves colorize)
-          else if in_range mouse_x mouse_y 750 190 then
+            grid_fbm 0 0 size 2 convert_grayscale)
+          else if in_range mouse_x mouse_y 800 300 then (
             (* Fractal Noise *)
-            clear_graph ()
+            clear_graph ();
+            grid_fbm 0 0 size 6 convert_grayscale)
+          else if in_range mouse_x mouse_y 700 240 then (
+            (* Perlin Colored *)
+            clear_graph ();
+            grid_fbm 0 0 size 2 convert_bluegreenscale)
+          else if in_range mouse_x mouse_y 800 240 then (
+            (* Fractal Colored *)
+            clear_graph ();
+            grid_fbm 0 0 size 6 convert_bluegreenscale)
+          else if in_range mouse_x mouse_y 700 180 then (
+            (* Perlin Landscape *)
+            clear_graph ();
+            grid_fbm 0 0 size 2 convert_landscape)
+          else if in_range mouse_x mouse_y 800 180 then (
+            (* Fractal Landscape *)
+            clear_graph ();
+            grid_fbm 0 0 size 6 convert_landscape)
+          else if in_range mouse_x mouse_y 700 120 then (
+            (* Perlin Wood *)
+            clear_graph ();
+            grid_fbm 0 0 size 2 convert_wood)
+          else if in_range mouse_x mouse_y 800 120 then (
+            (* Fractal Wood *)
+            clear_graph ();
+            grid_fbm 0 0 size 6 convert_wood)
           else if in_range mouse_x mouse_y (size_x () - 100) 10 then
             close_graph ()
           else loop ()
@@ -255,33 +279,5 @@ let rec grid_fbm x y size n_octaves colorize =
     display_matrix rgb_mat x y size;
     grid_fbm (x + size) y size n_octaves colorize
 
-(** [grid x y size] creates a grid of size [size] on the screen starting from
-    the [x] and [y] positions until the specified screen size is filled. *)
-let rec grid x y size =
-  if y >= snd scn_size then (
-    draw_interface 700 250;
-    let rec loop _ =
-      match wait_next_event [ Button_down ] with
-      | { mouse_x; mouse_y } ->
-          (* Colored Noise*)
-          if in_range mouse_x mouse_y 700 250 then clear_graph ()
-          else if in_range mouse_x mouse_y 800 250 then (
-            clear_graph ();
-            grid 0 0 size)
-          else if in_range mouse_x mouse_y 750 190 then
-            (* Fractal Noise *)
-            clear_graph ()
-          else if in_range mouse_x mouse_y (size_x () - 100) 10 then
-            close_graph ()
-          else loop ()
-    in
-    loop ())
-  else if x >= fst scn_size then grid 0 (y + size) size
-  else
-    let dmat = distance_matrix (basic_matrix size) size x y in
-    let rgb_mat = pixel_mat (gray_matrix size) dmat 0 0 size in
-    display_matrix rgb_mat x y size;
-    grid (x + size) y size
-
 let () = Random.self_init ()
-let () = grid_fbm 0 0 50 6 convert_wood
+let () = grid_fbm 0 0 50 2 convert_grayscale
