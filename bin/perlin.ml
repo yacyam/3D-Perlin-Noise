@@ -9,13 +9,18 @@ let scn_size = (size_x () - 400, size_y ())
 
 (** [gen_random_values] tail recursively generates a random vector of size 255
     with integers in range 0-255 for the perlin noise map *)
+
 let gen_random_values () =
   Random.self_init ();
   let rec loop acc = function
     | 0 -> acc
-    | size -> loop (int_of_float (floor (Random.float 255.9)) :: acc) (size - 1)
+    | size ->
+        loop
+          (acc.(size - 1) <- int_of_float (floor (Random.float 255.9));
+           acc)
+          (size - 1)
   in
-  loop [] 256
+  loop (Array.make 256 0) 256
 
 (** [normalize size (p1, p2, p3, p4)] is for normalizing the lengths of the
     distance vectors to be in range 0..1 *)
@@ -221,35 +226,35 @@ let rec grid_fbm x y size n_octaves colorize rand_vals =
           if in_range mouse_x mouse_y 700 300 then (
             (* Perlin Noise *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_grayscale (gen_random_values ()))
+            grid_fbm 0 0 100 2 convert_grayscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 300 then (
             (* Fractal Noise *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_grayscale (gen_random_values ()))
+            grid_fbm 0 0 50 6 convert_grayscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 240 then (
             (* Perlin Colored *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_bluegreenscale (gen_random_values ()))
+            grid_fbm 0 0 100 2 convert_bluegreenscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 240 then (
             (* Fractal Colored *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_bluegreenscale (gen_random_values ()))
+            grid_fbm 0 0 50 6 convert_bluegreenscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 180 then (
             (* Perlin Landscape *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_landscape (gen_random_values ()))
+            grid_fbm 0 0 100 2 convert_landscape (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 180 then (
             (* Fractal Landscape *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_landscape (gen_random_values ()))
+            grid_fbm 0 0 50 6 convert_landscape (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 120 then (
             (* Perlin Wood *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_wood (gen_random_values ()))
+            grid_fbm 0 0 100 2 convert_wood (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 120 then (
             (* Fractal Wood *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_wood (gen_random_values ()))
+            grid_fbm 0 0 50 6 convert_wood (gen_random_values ()))
           else if in_range mouse_x mouse_y (size_x () - 100) 10 then
             close_graph ()
           else loop ()
@@ -267,4 +272,4 @@ let rec grid_fbm x y size n_octaves colorize rand_vals =
     grid_fbm (x + size) y size n_octaves colorize rand_vals
 
 let () = Random.self_init ()
-let () = grid_fbm 0 0 50 2 convert_grayscale (gen_random_values ())
+let () = grid_fbm 0 0 100 2 convert_grayscale (gen_random_values ())

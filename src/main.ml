@@ -44,17 +44,17 @@ let gradient_of_pixel_fbm freq random_values pixel_pos =
   let x_pos = Int.abs (Float.to_int x_float) in
   let y_pos = Int.abs (Float.to_int y_float) in
   (* TL *)
-  let g1 = List.nth random_values (x_pos mod 256) in
-  let g1_final = List.nth random_values ((g1 + y_pos + 1) mod 256) mod 4 in
+  let g1 = random_values.(x_pos mod 256) in
+  let g1_final = random_values.((g1 + y_pos + 1) mod 256) mod 4 in
   (* TR *)
-  let g2 = List.nth random_values ((x_pos + 1) mod 256) in
-  let g2_final = List.nth random_values ((g2 + y_pos + 1) mod 256) mod 4 in
+  let g2 = random_values.((x_pos + 1) mod 256) in
+  let g2_final = random_values.((g2 + y_pos + 1) mod 256) mod 4 in
   (* BL *)
-  let g3 = List.nth random_values (x_pos mod 256) in
-  let g3_final = List.nth random_values ((g3 + y_pos) mod 256) mod 4 in
+  let g3 = random_values.(x_pos mod 256) in
+  let g3_final = random_values.((g3 + y_pos) mod 256) mod 4 in
   (* BR *)
-  let g4 = List.nth random_values ((x_pos + 1) mod 256) in
-  let g4_final = List.nth random_values ((g4 + y_pos) mod 256) mod 4 in
+  let g4 = random_values.((x_pos + 1) mod 256) in
+  let g4_final = random_values.((g4 + y_pos) mod 256) mod 4 in
   let frac_x = x_float -. Float.floor x_float in
   let frac_y = y_float -. Float.floor y_float in
   let d1 = dot_grad_dist g1_final (frac_x, frac_y -. 1., 0.) in
