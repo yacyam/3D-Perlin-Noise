@@ -7,22 +7,28 @@ let () = set_window_title "Perlin Noise"
 let () = resize_window 1000 600
 let scn_size = (size_x () - 400, size_y ())
 
+(** [gen_random_values] tail recursively generates a random vector of size 255
+    with integers in range 0-255 for the perlin noise map *)
+let gen_random_values () =
+  Random.self_init ();
+  let rec loop acc = function
+    | 0 -> acc
+    | size -> loop (int_of_float (floor (Random.float 255.9)) :: acc) (size - 1)
+  in
+  loop [] 256
+
 (** [normalize size (p1, p2, p3, p4)] is for normalizing the lengths of the
     distance vectors to be in range 0..1 *)
-let normalize size (p1, p2, p3, p4) =
-  ( (get_x p1 /. sqrt 2., get_y p1 /. sqrt 2., get_z p1 /. sqrt 2.),
-    (get_x p2 /. sqrt 2., get_y p2 /. sqrt 2., get_z p2 /. sqrt 2.),
-    (get_x p3 /. sqrt 2., get_y p3 /. sqrt 2., get_z p3 /. sqrt 2.),
-    (get_x p4 /. sqrt 2., get_y p4 /. sqrt 2., get_z p4 /. sqrt 2.) )
+let normalize size p1 =
+  (get_x p1 /. sqrt 2., get_y p1 /. sqrt 2., get_z p1 /. sqrt 2.)
 
 (** [distance_matrix mat size x y] creates a matrix of distances to each pixel
     defined by the [size] of the screen. For each row of the matrix, each entry
-    holds the distance from the TOP LEFT, TOP RIGHT, BOTTOM LEFT, and BOTTOM
-    RIGHT based on the [x] and [y] position of pixel.
+    holds the distance from the BOTTOM RIGHT based on the [x] and [y] position
+    of pixel.
 
     Requires: [mat] must be a [size] by [size] matrix. *)
-let rec distance_matrix mat size x y :
-    (vector * vector * vector * vector) Matrix.matrix =
+let rec distance_matrix mat size x y : vector Matrix.matrix =
   (* This helper only allows for a distance matrix of [size] by [size] to be
      created, as if we start at some x and y position on screen where it's not 0
      0, then we have to hold the initial x and y positions, and then iterate
@@ -31,7 +37,6 @@ let rec distance_matrix mat size x y :
   let rec distance_matrix_helper mat x y x_hold y_hold =
     let x_dist = float_of_int x in
     let y_dist = float_of_int y in
-    let f_size = float_of_int size in
     if y - y_hold >= size then mat
     else if x - x_hold >= size then
       (* Go up by a row *)
@@ -39,15 +44,7 @@ let rec distance_matrix mat size x y :
     else
       distance_matrix_helper
         (Matrix.add_entry (y - y_hold) (x - x_hold)
-           (( (*TL*)
-              (x_dist, y_dist -. f_size, 0.),
-              (*TR*)
-              (x_dist -. f_size, y_dist +. f_size, 0.),
-              (*BL*)
-              (x_dist, y_dist, 0.),
-              (*BR*)
-              (x_dist -. f_size, y_dist, 0.) )
-           |> normalize size)
+           ((x_dist, y_dist, 0.) |> normalize size)
            mat)
         (x + 1) y x_hold y_hold
   in
@@ -55,9 +52,7 @@ let rec distance_matrix mat size x y :
 
 (** [basic_matrix n] creates a basic [n] by [n] matrix with each entry holding 4
     zero vectors. *)
-let basic_matrix n : (vector * vector * vector * vector) Matrix.matrix =
-  Matrix.basic_matrix n n
-    ((0., 0., 0.), (0., 0., 0.), (0., 0., 0.), (0., 0., 0.))
+let basic_matrix n : vector Matrix.matrix = Matrix.basic_matrix n n (0., 0., 0.)
 
 (** [convert_grayscale x] takes in a float (random number generated from perlin
     noise) and outputs a grayscale rgb value based on the range the value [x]
@@ -141,16 +136,6 @@ let gray_matrix n = Matrix.basic_matrix n n (rgb 255 255 255)
 (** [pixel_mat rgb_mat d_mat x y size] returns a matrix [rgb_mat] that's the
     Main.ml noise function applied to the distance vectors in each entry of
     [d_mat] *)
-let rec pixel_mat rgb_mat d_mat x y size =
-  if x >= size then pixel_mat rgb_mat d_mat 0 (y + 1) size
-  else if y >= size then rgb_mat
-  else
-    pixel_mat
-      (Matrix.add_entry y x
-         (Matrix.get_entry y x d_mat |> Main.gradient_of_pixel
-        |> convert_grayscale)
-         rgb_mat)
-      d_mat (x + 1) y size
 
 let draw_main_text x y =
   set_color blue;
@@ -173,8 +158,8 @@ let draw_main_text x y =
   set_font "-*-fixed-medium-r-normal--25-*-*-*-*-*-iso8859-1";
   draw_string "EXIT"
 
-(** [draw_interface x y] draws the text interface and interactive buttons
-    starting at the [x] and [y] positions *)
+(** [draw_interface x y] draws the interactive buttons starting at the [x] and
+    [y] positions *)
 let draw_interface x y text =
   (* Perlin Button *)
   set_color red;
@@ -197,33 +182,33 @@ let draw_interface x y text =
 let in_range x y start_x start_y =
   x >= start_x && x <= start_x + 80 && y >= start_y && y <= start_y + 50
 
-let rec fbm acc d_mat y x freq amp n_octaves =
+let rec fbm acc d_mat y x freq amp n_octaves rand_vals =
   if n_octaves = 0 then acc
   else
     let value =
       Matrix.get_entry y x d_mat
-      |> Main.gradient_of_pixel_fbm freq
+      |> Main.gradient_of_pixel_fbm freq rand_vals
       |> ( *. ) amp |> ( +. ) acc
     in
-    fbm value d_mat y x (freq *. 2.) (amp *. 0.5) (n_octaves - 1)
+    fbm value d_mat y x (freq *. 2.) (amp *. 0.5) (n_octaves - 1) rand_vals
 
 (** [pixel_mat_fbm rgb_mat d_mat x y size freq amp] returns a matrix [rgb_mat]
     that's the Main.ml noise function applied to the distance vectors in each
     entry of [d_mat] *)
-let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize =
+let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals =
   if x >= size then
-    pixel_mat_fbm rgb_mat d_mat 0 (y + 1) size n_octaves colorize
+    pixel_mat_fbm rgb_mat d_mat 0 (y + 1) size n_octaves colorize rand_vals
   else if y >= size then rgb_mat
   else
     pixel_mat_fbm
       (Matrix.add_entry y x
-         (fbm 0. d_mat y x 0.005 1. n_octaves |> colorize)
+         (fbm 0. d_mat y x 0.005 1. n_octaves rand_vals |> colorize)
          rgb_mat)
-      d_mat (x + 1) y size n_octaves colorize
+      d_mat (x + 1) y size n_octaves colorize rand_vals
 
 (** [grid x y size] creates a grid of size [size] on the screen starting from
     the [x] and [y] positions until the specified screen size is filled. *)
-let rec grid_fbm x y size n_octaves colorize =
+let rec grid_fbm x y size n_octaves colorize rand_vals =
   if y >= snd scn_size then (
     draw_main_text 700 300;
     draw_interface 700 300 "  Noise";
@@ -236,48 +221,50 @@ let rec grid_fbm x y size n_octaves colorize =
           if in_range mouse_x mouse_y 700 300 then (
             (* Perlin Noise *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_grayscale)
+            grid_fbm 0 0 size 2 convert_grayscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 300 then (
             (* Fractal Noise *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_grayscale)
+            grid_fbm 0 0 size 6 convert_grayscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 240 then (
             (* Perlin Colored *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_bluegreenscale)
+            grid_fbm 0 0 size 2 convert_bluegreenscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 240 then (
             (* Fractal Colored *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_bluegreenscale)
+            grid_fbm 0 0 size 6 convert_bluegreenscale (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 180 then (
             (* Perlin Landscape *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_landscape)
+            grid_fbm 0 0 size 2 convert_landscape (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 180 then (
             (* Fractal Landscape *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_landscape)
+            grid_fbm 0 0 size 6 convert_landscape (gen_random_values ()))
           else if in_range mouse_x mouse_y 700 120 then (
             (* Perlin Wood *)
             clear_graph ();
-            grid_fbm 0 0 size 2 convert_wood)
+            grid_fbm 0 0 size 2 convert_wood (gen_random_values ()))
           else if in_range mouse_x mouse_y 800 120 then (
             (* Fractal Wood *)
             clear_graph ();
-            grid_fbm 0 0 size 6 convert_wood)
+            grid_fbm 0 0 size 6 convert_wood (gen_random_values ()))
           else if in_range mouse_x mouse_y (size_x () - 100) 10 then
             close_graph ()
           else loop ()
     in
     loop ())
-  else if x >= fst scn_size then grid_fbm 0 (y + size) size n_octaves colorize
+  else if x >= fst scn_size then
+    grid_fbm 0 (y + size) size n_octaves colorize rand_vals
   else
     let dmat = distance_matrix (basic_matrix size) size x y in
     let rgb_mat =
       pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize
+        rand_vals
     in
     display_matrix rgb_mat x y size;
-    grid_fbm (x + size) y size n_octaves colorize
+    grid_fbm (x + size) y size n_octaves colorize rand_vals
 
 let () = Random.self_init ()
-let () = grid_fbm 0 0 50 2 convert_grayscale
+let () = grid_fbm 0 0 50 2 convert_grayscale (gen_random_values ())
