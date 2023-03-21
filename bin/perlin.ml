@@ -9,7 +9,6 @@ let scn_size = (size_x () - 400, size_y ())
 
 (** [gen_random_values] tail recursively generates a random vector of size 255
     with integers in range 0-255 for the perlin noise map *)
-
 let gen_random_values () =
   Random.self_init ();
   let rec loop acc = function
