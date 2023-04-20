@@ -1,25 +1,26 @@
-open Graphics
+open Raylib
 open Linearalg
 open Vector
 
-let _ = open_graph ""
-let () = set_window_title "Perlin Noise"
-let () = resize_window 1000 600
-let scn_size = (size_x () - 400, size_y ())
+module RTG = struct
+  let set_state x =
+    let new_state = Random.State.make [| x |] in
+    Random.set_state new_state
 
-(** [gen_random_values] tail recursively generates a random vector of size 255
-    with integers in range 0-255 for the perlin noise map *)
-let gen_random_values () =
-  Random.self_init ();
-  let rec loop acc = function
-    | 0 -> acc
-    | size ->
-        loop
-          (acc.(size - 1) <- int_of_float (floor (Random.float 255.9));
-           acc)
-          (size - 1)
-  in
-  loop (Array.make 256 0) 256
+  (** [gen_random_table] tail recursively generates a random vector of size 255
+      with integers in range 0-255 for the perlin noise map *)
+  let gen_random_table seed =
+    set_state seed;
+    let rec loop acc = function
+      | 0 -> acc
+      | size ->
+          loop
+            (acc.(size - 1) <- int_of_float (floor (Random.float 255.9));
+             acc)
+            (size - 1)
+    in
+    loop (Array.make 256 0) 256
+end
 
 (** [normalize size (p1, p2, p3, p4)] is for normalizing the lengths of the
     distance vectors to be in range 0..1 *)
@@ -63,26 +64,28 @@ let basic_matrix n : vector Matrix.matrix = Matrix.basic_matrix n n (0., 0., 0.)
     encompassed.*)
 let convert_grayscale x =
   let scaled_x = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.0)) in
-  rgb scaled_x scaled_x scaled_x
+  Color.create scaled_x scaled_x scaled_x 255
 
 (** [convert_bluegreenscale x] takes in a float (random number generated from
     perlin noise) and outputs a blue-green rgb scaled value based on [x]. x
     should be in 0..1 or very close to it. *)
 let convert_bluegreenscale x =
   let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
-  rgb 0 x_prime (255 - x_prime)
+  Color.create 0 x_prime (255 - x_prime) 255
 
 (** [convert_landmass x] takes in a float (random number generated from perlin
     noise) and outputs a blue or green rgb scaled value based on [x]. x should
     be in 0..1 or very close to it. If x is small enough, it outputs a blue
     scale value, otherwise it's green scale. *)
 let convert_landscape x =
+  let open Color in
   let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
   if x_prime < 100 then
-    rgb 0 0
+    create 0 0
       (40 + int_of_float (Float.round (float_of_int x_prime *. (215. /. 100.))))
+      255
   else if x_prime > 110 then
-    rgb
+    create
       (int_of_float
          (10. -. Float.round (float_of_int (x_prime - 110) *. (10. /. 145.))))
       (int_of_float
@@ -90,6 +93,7 @@ let convert_landscape x =
             (160. -. (float_of_int (x_prime - 110) *. (160. /. 145.)) +. 50.)))
       (int_of_float
          (60. -. Float.round (float_of_int (x_prime - 110) *. (60. /. 145.))))
+      255
   else
     let r, g, b =
       ( Int.abs
@@ -102,89 +106,25 @@ let convert_landscape x =
           (int_of_float
              (((float_of_int x_prime -. 100.) *. (20. /. 10.)) +. 153.)) )
     in
-    rgb r g b
+    create r g b 255
 
 (** [convert_brownscale x] takes in a float (random number generated from perlin
     noise) and outputs a brown rgb scaled value based on [x]. x should be in
     0..1 or very close to it. *)
 let convert_wood x =
+  let open Color in
   let x_prime = (x +. 0.95) /. 2. in
-  if int_of_float (Float.round (x_prime *. 100.)) mod 4 = 0 then rgb 166 99 64
+  if int_of_float (Float.round (x_prime *. 100.)) mod 4 = 0 then
+    create 166 99 64 255
   else
     let r, g, b =
       ( Int.abs (int_of_float (x_prime *. 166.)),
         Int.abs (int_of_float (x_prime *. 99.)),
         Int.abs (int_of_float (x_prime *. 64.)) )
     in
-    rgb r g b
+    create r g b 255
 
-(** [display_matrix mat x y size] displays the matrix entries at the specified x
-    and y coordinates on the screen, bounded by the [size] which is specified by
-    matrix size. Requires: [mat].row_length and [size] are the same length *)
-let display_matrix mat x y size =
-  (* [y_hold] and [x_hold] will always retain the first x and y input, so that
-     we can calculate when exactly the x and y are off screen, based on [size]*)
-  let rec display_matrix_helper x y x_hold y_hold =
-    if y_hold + size <= y then ()
-    else if x_hold + size <= x then
-      display_matrix_helper (x - size) (y + 1) x_hold y_hold
-    else (
-      set_color (Matrix.get_entry (y - y_hold) (x - x_hold) mat);
-      fill_rect x y 1 1;
-      display_matrix_helper (x + 1) y x_hold y_hold)
-  in
-  display_matrix_helper x y x y
-
-let gray_matrix n = Matrix.basic_matrix n n (rgb 255 255 255)
-
-(** [pixel_mat rgb_mat d_mat x y size] returns a matrix [rgb_mat] that's the
-    Main.ml noise function applied to the distance vectors in each entry of
-    [d_mat] *)
-
-let draw_main_text x y =
-  set_color blue;
-  moveto (x - 5) (y + 180);
-  (* https://openclassrooms.com/forum/sujet/ocaml-changer-la-taille-du-texte-avec-graphics
-     For some reason text_size was never implemented, so you have to use a
-     specific font string to change the size *)
-  set_font "-*-fixed-medium-r-normal--70-*-*-*-*-*-iso8859-1";
-  draw_string "CHOOSE";
-  moveto (x + 20) (y + 130);
-  draw_string "YOUR";
-  moveto (x + 10) (y + 80);
-  draw_string "NOISE";
-
-  (* Exit Button *)
-  set_color black;
-  fill_rect (size_x () - 100) 10 80 50;
-  set_color white;
-  moveto (size_x () - 87) 22;
-  set_font "-*-fixed-medium-r-normal--25-*-*-*-*-*-iso8859-1";
-  draw_string "EXIT"
-
-(** [draw_interface x y] draws the interactive buttons starting at the [x] and
-    [y] positions *)
-let draw_interface x y text =
-  (* Perlin Button *)
-  set_color red;
-  draw_rect x y 80 50;
-  moveto (x + 12) (y + 30);
-  set_font "-*-fixed-medium-r-normal--15-*-*-*-*-*-iso8859-1";
-  draw_string "Perlin";
-  moveto (x + 1) (y + 10);
-  draw_string text;
-  (* Fractal Button *)
-  set_color magenta;
-  moveto (x + 111) (y + 30);
-  draw_rect (x + 100) y 80 50;
-  draw_string "Fractal";
-  moveto (x + 101) (y + 10);
-  draw_string text
-
-(** [in_range x y start_x start_y] checks if x and y are within a 80 by 50
-    (button size) rectangle range starting at [start_x] and [start_y] *)
-let in_range x y start_x start_y =
-  x >= start_x && x <= start_x + 80 && y >= start_y && y <= start_y + 50
+let gray_matrix n = Matrix.basic_matrix n n (Color.create 255 255 255 255)
 
 let rec fbm acc d_mat y x freq amp n_octaves rand_vals =
   if n_octaves = 0 then acc
@@ -213,62 +153,57 @@ let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals =
 (** [grid x y size] creates a grid of size [size] on the screen starting from
     the [x] and [y] positions until the specified screen size is filled. *)
 let rec grid_fbm x y size n_octaves colorize rand_vals =
-  if y >= snd scn_size then (
-    draw_main_text 700 300;
-    draw_interface 700 300 "  Noise";
-    draw_interface 700 240 " Colored";
-    draw_interface 700 180 "Landscape";
-    draw_interface 700 120 "  Wood";
-    let rec loop _ =
-      match wait_next_event [ Button_down ] with
-      | { mouse_x; mouse_y } ->
-          if in_range mouse_x mouse_y 700 300 then (
-            (* Perlin Noise *)
-            clear_graph ();
-            grid_fbm 0 0 100 2 convert_grayscale (gen_random_values ()))
-          else if in_range mouse_x mouse_y 800 300 then (
-            (* Fractal Noise *)
-            clear_graph ();
-            grid_fbm 0 0 50 6 convert_grayscale (gen_random_values ()))
-          else if in_range mouse_x mouse_y 700 240 then (
-            (* Perlin Colored *)
-            clear_graph ();
-            grid_fbm 0 0 100 2 convert_bluegreenscale (gen_random_values ()))
-          else if in_range mouse_x mouse_y 800 240 then (
-            (* Fractal Colored *)
-            clear_graph ();
-            grid_fbm 0 0 50 6 convert_bluegreenscale (gen_random_values ()))
-          else if in_range mouse_x mouse_y 700 180 then (
-            (* Perlin Landscape *)
-            clear_graph ();
-            grid_fbm 0 0 100 2 convert_landscape (gen_random_values ()))
-          else if in_range mouse_x mouse_y 800 180 then (
-            (* Fractal Landscape *)
-            clear_graph ();
-            grid_fbm 0 0 50 6 convert_landscape (gen_random_values ()))
-          else if in_range mouse_x mouse_y 700 120 then (
-            (* Perlin Wood *)
-            clear_graph ();
-            grid_fbm 0 0 100 2 convert_wood (gen_random_values ()))
-          else if in_range mouse_x mouse_y 800 120 then (
-            (* Fractal Wood *)
-            clear_graph ();
-            grid_fbm 0 0 50 6 convert_wood (gen_random_values ()))
-          else if in_range mouse_x mouse_y (size_x () - 100) 10 then
-            close_graph ()
-          else loop ()
-    in
-    loop ())
-  else if x >= fst scn_size then
-    grid_fbm 0 (y + size) size n_octaves colorize rand_vals
-  else
-    let dmat = distance_matrix (basic_matrix size) size x y in
-    let rgb_mat =
-      pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize
-        rand_vals
-    in
-    display_matrix rgb_mat x y size;
-    grid_fbm (x + size) y size n_octaves colorize rand_vals
+  let dmat = distance_matrix (basic_matrix size) size x y in
+  pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize rand_vals
 
-let () = Random.self_init ()
-let () = grid_fbm 0 0 100 2 convert_grayscale (gen_random_values ())
+let ray_setup () =
+  let open Raylib in
+  init_window 1000 600 "3D Perlin Noise";
+  let camera =
+    Camera.create
+      (Vector3.create 350.0 200.0 620.0) (* position *)
+      (Vector3.create 300.0 350.0 ~-.70.0) (* target *)
+      (Vector3.create 0.0 1.0 50.0) (* up *)
+      90.0 (* FOV *) CameraProjection.Perspective
+  in
+  set_target_fps 60;
+  camera
+
+let draw_all camera mat =
+  begin_drawing ();
+  clear_background Color.blue;
+  begin_mode_3d camera;
+  let rec draw_seq x y =
+    if y >= 600.0 then ()
+    else if x >= 600.0 then draw_seq 0. (y +. 10.0)
+    else
+      let mat_entry = Matrix.get_entry (int_of_float x) (int_of_float y) mat in
+      draw_cube (Vector3.create x y 0.0) 10.0 10.0
+        (Color.r mat_entry |> float_of_int)
+        mat_entry;
+      draw_seq (x +. 10.0) y
+  in
+  draw_seq 0.0 0.0;
+  end_mode_3d ();
+  end_drawing ()
+
+let mat = grid_fbm 0 0 600 6 convert_landscape (RTG.gen_random_table 1)
+
+let rec loop camera =
+  let open Raylib in
+  if window_should_close () then close_window ()
+  else
+    let camera =
+      if is_key_down Key.Z then
+        Camera.(
+          create (position camera)
+            (Vector3.create 300.0 350.0 ~-.70.0)
+            (* target *) (up camera) 45.0 (* FOV *)
+            CameraProjection.Perspective)
+      else camera
+    in
+    update_camera (addr camera) CameraMode.Third_person;
+    draw_all camera mat;
+    loop camera
+
+let () = ray_setup () |> loop

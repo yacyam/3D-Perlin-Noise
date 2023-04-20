@@ -1,3 +1,3 @@
-(library
+(executable
  (name perlin)
- (libraries Linearalg graphics))
+ (libraries Linearalg raylib))

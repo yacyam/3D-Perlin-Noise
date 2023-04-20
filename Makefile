@@ -1,7 +1,8 @@
 .PHONY: test check
 
-utop:
-	dune utop bin
+play:
+	dune build
+	dune exec ./bin/perlin.exe
 
 build:
 	dune build
