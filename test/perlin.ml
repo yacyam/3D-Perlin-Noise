@@ -140,6 +140,21 @@ let vector_tests =
 (******************************************************************************)
 (******************************************************************************)
 
+let to_string_elems mat_row printer =
+  List.fold_left
+    (fun acc elem ->
+      if acc = "[" then acc ^ printer elem else acc ^ ";" ^ printer elem)
+    "[" mat_row
+  ^ "]"
+
+let to_string_list printer mat =
+  List.fold_left
+    (fun acc elem ->
+      if acc = "[" then acc ^ to_string_elems elem printer
+      else acc ^ ";" ^ to_string_elems elem printer)
+    "[" mat
+  ^ "]"
+
 let basic_matrix_test (name : string) (rows : int) (cols : int) (entry : 'a)
     (expected_output : 'a list list) =
   name >:: fun _ ->
@@ -179,21 +194,23 @@ let basic_matrix_tests =
       ];
   ]
 
-let basic_5b5_mat = basic_matrix 5 5 0
-let basic_5b5_2 = add_entry 0 0 10 basic_5b5_mat
-let basic_5b5_3 = add_entry 4 4 10 basic_5b5_2
-let basic_5b5_4 = add_entry 4 0 10 basic_5b5_3
-let basic_5b5_5 = add_entry 0 4 10 basic_5b5_4
-let basic_5b5_6 = add_entry 2 2 10 basic_5b5_5
-let skinny_matrix = basic_matrix 10 1 (0., 0., 0.)
-let wide_matrix = basic_matrix 1 100 ""
-let basic_1b5 = basic_matrix 1 5 0
-let added_2b5 = add_row [ 1; 3; 5; 7; 3 ] basic_1b5
+let basic_5b5_mat () = basic_matrix 5 5 0
+let basic_5b5_2 () = add_entry 0 0 10 (basic_5b5_mat ())
+let basic_5b5_3 () = add_entry 4 4 10 (basic_5b5_2 ())
+let basic_5b5_4 () = add_entry 4 0 10 (basic_5b5_3 ())
+let basic_5b5_5 () = add_entry 0 4 10 (basic_5b5_4 ())
+let basic_5b5_6 () = add_entry 2 2 10 (basic_5b5_5 ())
+let skinny_matrix () = basic_matrix 10 1 (0., 0., 0.)
+let wide_matrix () = basic_matrix 1 100 ""
+let basic_1b5 () = basic_matrix 1 5 0
+let added_2b5 () = add_row [ 1; 3; 5; 7; 3 ] (basic_1b5 ())
 
 let add_entry_test (name : string) (rows : int) (cols : int) (entry : 'a)
-    (matrix : 'a matrix) (expected_output : 'a list list) =
+    (matrix : unit -> int Matrix.t) (expected_output : int list list) =
   name >:: fun _ ->
-  assert_equal expected_output (add_entry rows cols entry matrix |> to_list)
+  assert_equal expected_output
+    (add_entry rows cols entry (matrix ()) |> to_list)
+    ~printer:(to_string_list string_of_int)
 
 let add_entry_tests =
   [
@@ -241,25 +258,27 @@ let add_entry_tests =
       ];
   ]
 
-let get_row_test (name : string) (row : int) (matrix : 'a matrix)
+let get_row_test (name : string) (row : int) (matrix : 'a Matrix.t)
     (expected_output : 'a list) =
   name >:: fun _ -> assert_equal expected_output (get_row row matrix)
 
 let get_row_tests =
   [
-    get_row_test "1st row of basic 5x5 matrix is all 0's" 0 basic_5b5_mat
+    get_row_test "1st row of basic 5x5 matrix is all 0's" 0 (basic_5b5_mat ())
       [ 0; 0; 0; 0; 0 ];
     get_row_test "5th row of altered 5x5 matrix has 10 in bottom left/right" 4
-      basic_5b5_5 [ 10; 0; 0; 0; 10 ];
-    get_row_test "3rd row of altered 5x5 matrix has 10 in middle" 2 basic_5b5_6
-      [ 0; 0; 10; 0; 0 ];
-    get_row_test "10th row of skinny matrix is a single element" 9 skinny_matrix
+      (basic_5b5_5 ()) [ 10; 0; 0; 0; 10 ];
+    get_row_test "3rd row of altered 5x5 matrix has 10 in middle" 2
+      (basic_5b5_6 ()) [ 0; 0; 10; 0; 0 ];
+    get_row_test "10th row of skinny matrix is a single element" 9
+      (skinny_matrix ())
       [ (0., 0., 0.) ];
-    get_row_test "1st row of skinny matrix is a single element" 0 skinny_matrix
+    get_row_test "1st row of skinny matrix is a single element" 0
+      (skinny_matrix ())
       [ (0., 0., 0.) ];
   ]
 
-let add_row_test (name : string) (row_list : 'a list) (matrix : 'a matrix)
+let add_row_test (name : string) (row_list : 'a list) (matrix : 'a Matrix.t)
     (expected_output : 'a list list) =
   name >:: fun _ ->
   assert_equal expected_output (add_row row_list matrix |> to_list)
@@ -267,11 +286,11 @@ let add_row_test (name : string) (row_list : 'a list) (matrix : 'a matrix)
 let add_row_tests =
   [
     add_row_test "adding row to 1x5 matrix makes it 2x5" [ 1; 3; 5; 7; 3 ]
-      basic_1b5
+      (basic_1b5 ())
       [ [ 0; 0; 0; 0; 0 ]; [ 1; 3; 5; 7; 3 ] ];
     add_row_test "adding row to 2x5 matrix makes it 3x5"
       [ max_int; max_int; min_int; 0; 5 ]
-      added_2b5
+      (added_2b5 ())
       [
         [ 0; 0; 0; 0; 0 ];
         [ 1; 3; 5; 7; 3 ];
@@ -300,34 +319,35 @@ let add_row_tests =
       ];
   ]
 
-let row_length_test (name : string) (matrix : 'a matrix) (expected_output : int)
-    =
+let row_length_test (name : string) (matrix : 'a Matrix.t)
+    (expected_output : int) =
   name >:: fun _ -> assert_equal expected_output (row_length matrix)
 
 let row_length_tests =
   [
     row_length_test "empty matrix should be of length 0" empty 0;
-    row_length_test "basic 5x5 matrix should be length 5" basic_5b5_mat 5;
-    row_length_test "skinny matrix should be length 10" skinny_matrix 10;
-    row_length_test "wide matrix should be length 1" wide_matrix 1;
+    row_length_test "basic 5x5 matrix should be length 5" (basic_5b5_mat ()) 5;
+    row_length_test "skinny matrix should be length 10" (skinny_matrix ()) 10;
+    row_length_test "wide matrix should be length 1" (wide_matrix ()) 1;
     row_length_test "basic 5x5 with added elements should stay length 5"
-      basic_5b5_6 5;
+      (basic_5b5_6 ()) 5;
   ]
 
-let get_entry_test (name : string) (row : int) (col : int) (matrix : 'a matrix)
-    (expected_output : 'a) =
+let get_entry_test (name : string) (row : int) (col : int)
+    (matrix : 'a Matrix.t) (expected_output : 'a) =
   name >:: fun _ -> assert_equal expected_output (get_entry row col matrix)
 
 let get_entry_tests =
   [
-    get_entry_test "bottom right element of basic 5x5 is 0" 4 4 basic_5b5_mat 0;
-    get_entry_test "top left element of basic 5x5 is 0" 0 0 basic_5b5_mat 0;
-    get_entry_test "middle element of added 5x5 is 10" 2 2 basic_5b5_6 10;
+    get_entry_test "bottom right element of basic 5x5 is 0" 4 4
+      (basic_5b5_mat ()) 0;
+    get_entry_test "top left element of basic 5x5 is 0" 0 0 (basic_5b5_mat ()) 0;
+    get_entry_test "middle element of added 5x5 is 10" 2 2 (basic_5b5_6 ()) 10;
     get_entry_test "50th element of first row wide matrix is (empty string)" 0
-      49 wide_matrix "";
-    get_entry_test "7th row of skinny matrix is zero vector" 6 0 skinny_matrix
-      (0., 0., 0.);
-    get_entry_test "2nd row 4th col of added 2b5 mat is 7" 1 3 added_2b5 7;
+      49 (wide_matrix ()) "";
+    get_entry_test "7th row of skinny matrix is zero vector" 6 0
+      (skinny_matrix ()) (0., 0., 0.);
+    get_entry_test "2nd row 4th col of added 2b5 mat is 7" 1 3 (added_2b5 ()) 7;
   ]
 
 let matrix_tests =

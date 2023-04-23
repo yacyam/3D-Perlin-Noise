@@ -3,12 +3,13 @@ open Linearalg
 open Vector
 
 module RTG = struct
+  (** [set_state x] sets the pseudo-random state based on the input seed [x] *)
   let set_state x =
     let new_state = Random.State.make [| x |] in
     Random.set_state new_state
 
-  (** [gen_random_table] tail recursively generates a random vector of size 255
-      with integers in range 0-255 for the perlin noise map *)
+  (** [gen_random_table] tail recursively generates a random table of size 256
+      with integers in range 0-255. *)
   let gen_random_table seed =
     set_state seed;
     let rec loop acc = function
@@ -28,12 +29,11 @@ let normalize size p1 =
   (get_x p1 /. sqrt 2., get_y p1 /. sqrt 2., get_z p1 /. sqrt 2.)
 
 (** [distance_matrix mat size x y] creates a matrix of distances to each pixel
-    defined by the [size] of the screen. For each row of the matrix, each entry
-    holds the distance from the BOTTOM RIGHT based on the [x] and [y] position
-    of pixel.
+    defined by the [size] of the screen. Each entry of the matrix [mat] holds
+    the distance relative to the starting [x] and [y] position.
 
     Requires: [mat] must be a [size] by [size] matrix. *)
-let rec distance_matrix mat size x y : vector Matrix.matrix =
+let rec distance_matrix mat size x y : vector Matrix.t =
   (* This helper only allows for a distance matrix of [size] by [size] to be
      created, as if we start at some x and y position on screen where it's not 0
      0, then we have to hold the initial x and y positions, and then iterate
@@ -55,9 +55,9 @@ let rec distance_matrix mat size x y : vector Matrix.matrix =
   in
   distance_matrix_helper mat x y x y
 
-(** [basic_matrix n] creates a basic [n] by [n] matrix with each entry holding 4
-    zero vectors. *)
-let basic_matrix n : vector Matrix.matrix = Matrix.basic_matrix n n (0., 0., 0.)
+(** [basic_matrix n] creates a basic [n] by [n] matrix with each entry holding
+    the zero vector. *)
+let basic_matrix n : vector Matrix.t = Matrix.basic_matrix n n (0., 0., 0.)
 
 (** [convert_grayscale x] takes in a float (random number generated from perlin
     noise) and outputs a grayscale rgb value based on the range the value [x]
@@ -108,7 +108,7 @@ let convert_landscape x =
     in
     create r g b 255
 
-(** [convert_brownscale x] takes in a float (random number generated from perlin
+(** [convert_wood x] takes in a float (random number generated from perlin
     noise) and outputs a brown rgb scaled value based on [x]. x should be in
     0..1 or very close to it. *)
 let convert_wood x =
@@ -150,8 +150,8 @@ let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals =
          rgb_mat)
       d_mat (x + 1) y size n_octaves colorize rand_vals
 
-(** [grid x y size] creates a grid of size [size] on the screen starting from
-    the [x] and [y] positions until the specified screen size is filled. *)
+(** [grid_fbm x y size] is a color matrix of dimensions [size] by [size] with
+    entries starting from the [x] and [y] positions. *)
 let rec grid_fbm x y size n_octaves colorize rand_vals =
   let dmat = distance_matrix (basic_matrix size) size x y in
   pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize rand_vals
@@ -169,7 +169,7 @@ let ray_setup () =
   set_target_fps 60;
   camera
 
-let draw_all camera mat =
+let draw_perlin camera mat =
   begin_drawing ();
   clear_background Color.blue;
   begin_mode_3d camera;
@@ -179,31 +179,43 @@ let draw_all camera mat =
     else
       let mat_entry = Matrix.get_entry (int_of_float x) (int_of_float y) mat in
       draw_cube (Vector3.create x y 0.0) 10.0 10.0
-        (Color.r mat_entry |> float_of_int)
+        (Color.g mat_entry |> float_of_int)
         mat_entry;
       draw_seq (x +. 10.0) y
   in
   draw_seq 0.0 0.0;
-  end_mode_3d ();
+  end_mode_3d ()
+
+let curr_seed = ref 5
+
+let draw_ui () =
+  draw_rectangle 10 10 150 250 Color.white;
+  draw_text ("Current Seed: " ^ string_of_int !curr_seed) 45 50 10 Color.black;
+  draw_text "Press R To" 57 80 10 Color.black;
+  draw_text "Change Current Seed" 35 90 10 Color.black;
+  draw_text "Drag Mouse To" 46 120 10 Color.black;
+  draw_text "Move Camera" 50 130 10 Color.black;
   end_drawing ()
 
-let mat = grid_fbm 0 0 600 6 convert_landscape (RTG.gen_random_table 1)
+let new_mat () =
+  grid_fbm 0 0 600 6 convert_grayscale (RTG.gen_random_table !curr_seed)
 
-let rec loop camera =
+let rec loop mat camera =
   let open Raylib in
   if window_should_close () then close_window ()
-  else
-    let camera =
-      if is_key_down Key.Z then
-        Camera.(
-          create (position camera)
-            (Vector3.create 300.0 350.0 ~-.70.0)
-            (* target *) (up camera) 45.0 (* FOV *)
-            CameraProjection.Perspective)
-      else camera
-    in
+  else if is_mouse_button_down MouseButton.Left then (
     update_camera (addr camera) CameraMode.Third_person;
-    draw_all camera mat;
-    loop camera
+    draw_perlin camera mat;
+    draw_ui ();
+    loop mat camera)
+  else if is_key_pressed Key.R then (
+    curr_seed := Raylib.get_random_value 0 1000;
+    draw_perlin camera mat;
+    draw_ui ();
+    loop (new_mat ()) camera)
+  else (
+    draw_perlin camera mat;
+    draw_ui ();
+    loop mat camera)
 
-let () = ray_setup () |> loop
+let () = ray_setup () |> loop (new_mat ())
