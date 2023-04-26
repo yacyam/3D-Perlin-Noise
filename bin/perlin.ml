@@ -61,66 +61,81 @@ let basic_matrix n : vector Matrix.t = Matrix.basic_matrix n n (0., 0., 0.)
 
 (** [convert_grayscale x] takes in a float (random number generated from perlin
     noise) and outputs a grayscale rgb value based on the range the value [x]
-    encompassed.*)
-let convert_grayscale x =
-  let scaled_x = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.0)) in
-  Color.create scaled_x scaled_x scaled_x 255
+    encompassed. x should be in 0..255. *)
+let rule_grayscale x = Color.create x x x 255
+
+let color_gray (x : float) : Color.t =
+  let color = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.0)) in
+  color |> rule_grayscale
 
 (** [convert_bluegreenscale x] takes in a float (random number generated from
     perlin noise) and outputs a blue-green rgb scaled value based on [x]. x
-    should be in 0..1 or very close to it. *)
-let convert_bluegreenscale x =
-  let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
-  Color.create 0 x_prime (255 - x_prime) 255
+    should be in 0..255. *)
+let rule_bluegreenscale x = Color.create 0 x (255 - x) 255
 
 (** [convert_landmass x] takes in a float (random number generated from perlin
     noise) and outputs a blue or green rgb scaled value based on [x]. x should
-    be in 0..1 or very close to it. If x is small enough, it outputs a blue
-    scale value, otherwise it's green scale. *)
-let convert_landscape x =
+    be in 0..255. If x is small enough, it outputs a blue scale value, otherwise
+    it's green scale. *)
+let rule_landscape x =
   let open Color in
-  let x_prime = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.)) in
-  if x_prime < 100 then
+  if x < 100 then
     create 0 0
-      (40 + int_of_float (Float.round (float_of_int x_prime *. (215. /. 100.))))
+      (40 + int_of_float (Float.round (float_of_int x *. (215. /. 100.))))
       255
-  else if x_prime > 110 then
+  else if x > 110 then
     create
       (int_of_float
-         (10. -. Float.round (float_of_int (x_prime - 110) *. (10. /. 145.))))
+         (10. -. Float.round (float_of_int (x - 110) *. (10. /. 145.))))
       (int_of_float
          (Float.round
-            (160. -. (float_of_int (x_prime - 110) *. (160. /. 145.)) +. 50.)))
+            (160. -. (float_of_int (x - 110) *. (160. /. 145.)) +. 50.)))
       (int_of_float
-         (60. -. Float.round (float_of_int (x_prime - 110) *. (60. /. 145.))))
+         (60. -. Float.round (float_of_int (x - 110) *. (60. /. 145.))))
       255
   else
     let r, g, b =
       ( Int.abs
-          (int_of_float
-             (((float_of_int x_prime -. 100.) *. (60. /. 10.)) +. 180.)),
+          (int_of_float (((float_of_int x -. 100.) *. (60. /. 10.)) +. 180.)),
         Int.abs
-          (int_of_float
-             (((float_of_int x_prime -. 100.) *. (40. /. 10.)) +. 188.)),
+          (int_of_float (((float_of_int x -. 100.) *. (40. /. 10.)) +. 188.)),
         Int.abs
-          (int_of_float
-             (((float_of_int x_prime -. 100.) *. (20. /. 10.)) +. 153.)) )
+          (int_of_float (((float_of_int x -. 100.) *. (20. /. 10.)) +. 153.)) )
     in
     create r g b 255
 
-(** [convert_wood x] takes in a float (random number generated from perlin
-    noise) and outputs a brown rgb scaled value based on [x]. x should be in
-    0..1 or very close to it. *)
-let convert_wood x =
+(** [rule_rust x] takes in an int (random number generated from perlin noise)
+    and outputs a brown rgb scaled value based on [x]. x should be in 0..255. *)
+let rule_rust x =
   let open Color in
-  let x_prime = (x +. 0.95) /. 2. in
-  if int_of_float (Float.round (x_prime *. 100.)) mod 4 = 0 then
+  let level = int_of_float (float_of_int x /. 255. *. 10.) mod 5 in
+  if level = 0 then create 183 65 14 255
+  else if level = 1 || level = 4 then
+    let r, g, b =
+      ( Int.abs (int_of_float (float_of_int x *. 183. /. 255.)),
+        Int.abs (int_of_float (float_of_int x *. 65. /. 255.)),
+        Int.abs (int_of_float (float_of_int x *. 14. /. 255.)) )
+    in
+    create r g b 255
+  else
+    let r, g, b =
+      ( Int.abs (int_of_float (float_of_int x *. 170. /. 300.)),
+        Int.abs (int_of_float (float_of_int x *. 169. /. 300.)),
+        Int.abs (int_of_float (float_of_int x *. 173. /. 300.)) )
+    in
+    create r g b 255
+
+(** [rule_wood x] takes in an int (random number generated from perlin noise)
+    and outputs a brown rgb scaled value based on [x]. x should be in 0..255. *)
+let rule_wood x =
+  let open Color in
+  if int_of_float (float_of_int x /. 255. *. 50.) mod 5 = 0 then
     create 166 99 64 255
   else
     let r, g, b =
-      ( Int.abs (int_of_float (x_prime *. 166.)),
-        Int.abs (int_of_float (x_prime *. 99.)),
-        Int.abs (int_of_float (x_prime *. 64.)) )
+      ( Int.abs (int_of_float (float_of_int x *. 166. /. 255.)),
+        Int.abs (int_of_float (float_of_int x *. 99. /. 255.)),
+        Int.abs (int_of_float (float_of_int x *. 64. /. 255.)) )
     in
     create r g b 255
 
@@ -170,10 +185,14 @@ let cam_setup () =
   set_target_fps 60;
   camera
 
+let color_func (rule : int -> Color.t) (color : Color.t) : Color.t =
+  let gray = Color.g color in
+  rule gray
+
 (** [draw_perlin camera mat res] draws the perlin noise on a three-dimensional
     axis based on the colors specified by [mat] and the starting [camera]
     position with the specified resolution [res] *)
-let draw_perlin camera mat res =
+let draw_perlin camera mat res color_rule =
   begin_drawing ();
   clear_background Color.skyblue;
   begin_mode_3d camera;
@@ -184,7 +203,7 @@ let draw_perlin camera mat res =
       let mat_entry = Matrix.get_entry (int_of_float x) (int_of_float y) mat in
       draw_cube (Vector3.create x y 0.0) res res
         (Color.g mat_entry |> float_of_int)
-        mat_entry;
+        (color_func color_rule mat_entry);
       draw_seq (x +. res) y
   in
   draw_seq 0.0 0.0;
@@ -241,13 +260,12 @@ let draw_ui seed res =
 
 (** [new_mat seed] creates a new perlin noise matrix utilizing a random table
     created from the inputted [seed] *)
-let new_mat seed =
-  grid_fbm 0 0 600 6 convert_grayscale (RTG.gen_random_table seed)
+let new_mat seed = grid_fbm 0 0 600 6 color_gray (RTG.gen_random_table seed)
 
 (** [loop mat seed camera] is the main game loop which repeatedly draws the
     [mat] created by the specified [seed] projected onto 3D space by the
     [camera] *)
-let rec loop mat seed camera =
+let rec loop mat seed color_rule camera =
   let open Raylib in
   if window_should_close () then close_window ()
   else if
@@ -256,38 +274,38 @@ let rec loop mat seed camera =
   then (
     (* Slider Logic *)
     input_res := float_of_int (get_mouse_x () - 25);
-    draw_perlin camera mat !input_res;
+    draw_perlin camera mat !input_res color_rule;
     draw_ui seed !input_res;
-    loop mat seed camera)
+    loop mat seed color_rule camera)
   else if is_mouse_button_down MouseButton.Left then (
     (* Camera Movement Logic *)
     update_camera (addr camera) CameraMode.Third_person;
-    draw_perlin camera mat !input_res;
+    draw_perlin camera mat !input_res color_rule;
     draw_ui seed !input_res;
-    loop mat seed camera)
+    loop mat seed color_rule camera)
   else if is_key_pressed Key.R then (
     let new_seed = Raylib.get_random_value 0 1000 in
-    draw_perlin camera mat !input_res;
+    draw_perlin camera mat !input_res color_rule;
     draw_ui new_seed !input_res;
-    loop (new_mat new_seed) new_seed camera)
+    loop (new_mat new_seed) new_seed color_rule camera)
   else if is_key_pressed Key.Enter then (
     (* Makes the inputted seed display on screen if valid integer *)
     match int_of_string !input_seed with
     | s ->
         input_seed := "";
-        draw_perlin camera mat !input_res;
+        draw_perlin camera mat !input_res color_rule;
         draw_ui seed !input_res;
-        loop (new_mat s) s camera
+        loop (new_mat s) s color_rule camera
     | exception _ ->
         input_seed := "";
-        draw_perlin camera mat !input_res;
+        draw_perlin camera mat !input_res color_rule;
         draw_ui seed !input_res;
-        loop mat seed camera)
+        loop mat seed color_rule camera)
   else (
     (* Allows for the user to input a seed, just keeps checking iteratively *)
     update_seed_input ();
-    draw_perlin camera mat !input_res;
+    draw_perlin camera mat !input_res color_rule;
     draw_ui seed !input_res;
-    loop mat seed camera)
+    loop mat seed color_rule camera)
 
-let () = cam_setup () |> loop (new_mat 5) 5
+let () = cam_setup () |> loop (new_mat 5) 5 rule_grayscale
