@@ -189,20 +189,40 @@ let color_func (rule : int -> Color.t) (color : Color.t) : Color.t =
   let gray = Color.g color in
   rule gray
 
-(** [draw_perlin camera mat res] draws the perlin noise on a three-dimensional
-    axis based on the colors specified by [mat] and the starting [camera]
-    position with the specified resolution [res] *)
+type pause =
+  | Pause
+  | Resume
+
+type change =
+  | Plus of pause
+  | Minus of pause
+
+let over_time = ref (0, Plus Pause)
+
+(** [draw_perlin camera mat res color_rule] draws the perlin noise on a
+    three-dimensional axis based on the colors specified by [mat] transformed by
+    [color_rule] and the starting [camera] position with the specified
+    resolution [res] *)
 let draw_perlin camera mat res color_rule =
   begin_drawing ();
   clear_background Color.skyblue;
   begin_mode_3d camera;
+  let mat_x = Matrix.row_length mat |> float_of_int in
   let rec draw_seq x y =
-    if y >= 600.0 then ()
-    else if x >= 600.0 then draw_seq 0. (y +. res)
+    if y >= mat_x then ()
+    else if x >= mat_x then draw_seq 0. (y +. res)
     else
       let mat_entry = Matrix.get_entry (int_of_float x) (int_of_float y) mat in
+      (* takes specified perlin value from !over_time then normalizes it so it
+         scales perlin ever so slightly over time *)
+      let entry_scaler =
+        Matrix.get_entry (int_of_float x) (fst !over_time) mat
+      in
+      let norm_scaler =
+        1.0 +. ((Color.g entry_scaler |> float_of_int) /. 255.)
+      in
       draw_cube (Vector3.create x y 0.0) res res
-        (Color.g mat_entry |> float_of_int)
+        ((Color.g mat_entry |> float_of_int) *. norm_scaler)
         (color_func color_rule mat_entry);
       draw_seq (x +. res) y
   in
@@ -214,9 +234,9 @@ let input_seed = ref ""
 
 (** [update_seed_input ()] mutably updates the string holding the user inputted
     seed *)
-let update_seed_input () =
+let update_seed_input key =
   if String.length !input_seed < 7 then
-    match get_key_pressed () with
+    match key with
     | Key.Zero -> input_seed := !input_seed ^ "0"
     | Key.One -> input_seed := !input_seed ^ "1"
     | Key.Two -> input_seed := !input_seed ^ "2"
@@ -231,6 +251,9 @@ let update_seed_input () =
 
 (** [input_res] is the starting resolution, or size of the blocks *)
 let input_res = ref 5.
+
+(** [not_clicked] denotes when the user has clicked on the screen. *)
+let not_clicked = ref true
 
 (** [draw_slider curr_res] draws the slider ui with the width specified by
     [curr_res] *)
@@ -249,12 +272,18 @@ let in_slider_range x_pos y_pos =
     current [seed] the perlin noise is based on *)
 let draw_ui seed res =
   draw_rectangle 10 10 150 250 Color.white;
-  draw_text ("Current Seed: " ^ string_of_int seed) 45 50 10 Color.black;
-  draw_text ("Input Seed: " ^ !input_seed) 45 60 10 Color.black;
-  draw_text "Press R To" 57 80 10 Color.black;
-  draw_text "Change Current Seed" 35 90 10 Color.black;
-  draw_text "Drag Mouse To" 46 120 10 Color.black;
-  draw_text "Move Camera" 50 130 10 Color.black;
+  draw_text ("Current Seed: " ^ string_of_int seed) 35 30 10 Color.black;
+  draw_text ("Input Seed: " ^ !input_seed) 35 40 10 Color.black;
+  draw_text "Inputs" 55 60 10 Color.black;
+  draw_text "R: Random Seed" 35 70 10 Color.black;
+  draw_text "A: Gray Noise" 35 80 10 Color.black;
+  draw_text "S: Bluegreen Noise" 35 90 10 Color.black;
+  draw_text "D: Landscape Noise" 35 100 10 Color.black;
+  draw_text "F: Rust Noise" 35 110 10 Color.black;
+  draw_text "SPACE: Play/Pause" 35 120 10 Color.black;
+  draw_text "Mutations" 80 130 10 Color.black;
+  if !not_clicked then
+    draw_text "* Drag Mouse To Move Camera *" 600 10 20 Color.brown;
   draw_slider (int_of_float res);
   end_drawing ()
 
@@ -262,50 +291,93 @@ let draw_ui seed res =
     created from the inputted [seed] *)
 let new_mat seed = grid_fbm 0 0 600 6 color_gray (RTG.gen_random_table seed)
 
+(** [change_logic ()] changes the perlin to move based on a set boundary if the
+    user specified it to be resumed. If paused, nothing is changed.*)
+let change_logic () =
+  let bounds () =
+    match snd !over_time with
+    | Plus Resume ->
+        if fst !over_time >= 599 then over_time := (599, Minus Resume)
+        else over_time := (fst !over_time + 1, Plus Resume)
+    | Minus Resume ->
+        if fst !over_time <= 0 then over_time := (0, Plus Resume)
+        else over_time := (fst !over_time - 1, Minus Resume)
+    | _ -> ()
+  in
+  bounds ()
+
 (** [loop mat seed camera] is the main game loop which repeatedly draws the
     [mat] created by the specified [seed] projected onto 3D space by the
     [camera] *)
 let rec loop mat seed color_rule camera =
   let open Raylib in
   if window_should_close () then close_window ()
-  else if
-    is_mouse_button_down MouseButton.Left
-    && in_slider_range (get_mouse_x ()) (get_mouse_y ())
-  then (
-    (* Slider Logic *)
-    input_res := float_of_int (get_mouse_x () - 25);
+  else if is_mouse_button_down MouseButton.Left then
+    mouse_logic mat seed color_rule camera
+  else
+    match get_key_pressed () with
+    | Key.R -> draw_random mat color_rule camera
+    | Key.A -> loop mat seed rule_grayscale camera
+    | Key.S -> loop mat seed rule_bluegreenscale camera
+    | Key.D -> loop mat seed rule_landscape camera
+    | Key.F -> loop mat seed rule_rust camera
+    | Key.Enter -> draw_input mat seed color_rule camera
+    | Key.Space -> play_movement mat seed color_rule camera
+    | key ->
+        (* Allows for the user to input a seed, just keeps checking
+           iteratively *)
+        update_seed_input key;
+        change_logic ();
+        draw_perlin camera mat !input_res color_rule;
+        draw_ui seed !input_res;
+        loop mat seed color_rule camera
+
+(** [draw_random mat color_rule camera] updates the noise with random seed *)
+and draw_random mat color_rule camera =
+  let new_seed = Raylib.get_random_value 0 1000 in
+  draw_perlin camera mat !input_res color_rule;
+  draw_ui new_seed !input_res;
+  loop (new_mat new_seed) new_seed color_rule camera
+
+(** [draw_input mat color_rule camera] updates the noise with user inputted seed
+    if valid. If input is empty, seed unchanged. *)
+and draw_input mat seed color_rule camera =
+  (* Makes the inputted seed display on screen if valid integer *)
+  draw_perlin camera mat !input_res color_rule;
+  draw_ui seed !input_res;
+  match int_of_string !input_seed with
+  | s ->
+      input_seed := "";
+      loop (new_mat s) s color_rule camera
+  | exception _ ->
+      input_seed := "";
+      loop mat seed color_rule camera
+
+(** [mouse_logic mat seed color_rule camera] handles the logic for dragging the
+    mouse on the screen, based on it's position. *)
+and mouse_logic mat seed color_rule camera =
+  not_clicked := false;
+  if in_slider_range (get_mouse_x ()) (get_mouse_y ()) then (
+    (* Slider Logic *) input_res := float_of_int (get_mouse_x () - 25);
     draw_perlin camera mat !input_res color_rule;
     draw_ui seed !input_res;
     loop mat seed color_rule camera)
-  else if is_mouse_button_down MouseButton.Left then (
+  else (
     (* Camera Movement Logic *)
     update_camera (addr camera) CameraMode.Third_person;
     draw_perlin camera mat !input_res color_rule;
     draw_ui seed !input_res;
     loop mat seed color_rule camera)
-  else if is_key_pressed Key.R then (
-    let new_seed = Raylib.get_random_value 0 1000 in
-    draw_perlin camera mat !input_res color_rule;
-    draw_ui new_seed !input_res;
-    loop (new_mat new_seed) new_seed color_rule camera)
-  else if is_key_pressed Key.Enter then (
-    (* Makes the inputted seed display on screen if valid integer *)
-    match int_of_string !input_seed with
-    | s ->
-        input_seed := "";
-        draw_perlin camera mat !input_res color_rule;
-        draw_ui seed !input_res;
-        loop (new_mat s) s color_rule camera
-    | exception _ ->
-        input_seed := "";
-        draw_perlin camera mat !input_res color_rule;
-        draw_ui seed !input_res;
-        loop mat seed color_rule camera)
-  else (
-    (* Allows for the user to input a seed, just keeps checking iteratively *)
-    update_seed_input ();
-    draw_perlin camera mat !input_res color_rule;
-    draw_ui seed !input_res;
-    loop mat seed color_rule camera)
+
+(** [play_movement mat seed color_rule camera] updates the noise to either pause
+    or resume and mutate in height. *)
+and play_movement mat seed color_rule camera =
+  let index = fst !over_time in
+  (match snd !over_time with
+  | Plus Resume -> over_time := (index, Plus Pause)
+  | Minus Resume -> over_time := (index, Minus Pause)
+  | Plus Pause -> over_time := (index, Plus Resume)
+  | Minus Pause -> over_time := (index, Minus Resume));
+  loop mat seed color_rule camera
 
 let () = cam_setup () |> loop (new_mat 5) 5 rule_grayscale
