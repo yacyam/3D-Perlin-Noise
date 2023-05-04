@@ -151,9 +151,9 @@ let rec fbm acc d_mat y x freq amp n_octaves rand_vals =
     in
     fbm value d_mat y x (freq *. 2.) (amp *. 0.5) (n_octaves - 1) rand_vals
 
-(** [pixel_mat_fbm rgb_mat d_mat x y size freq amp] returns a matrix [rgb_mat]
-    that's the Main.ml noise function applied to the distance vectors in each
-    entry of [d_mat] *)
+(** [pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals] returns
+    a matrix [rgb_mat] that's the Main.ml noise function applied to the distance
+    vectors in each entry of [d_mat] *)
 let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals =
   if x >= size then
     pixel_mat_fbm rgb_mat d_mat 0 (y + 1) size n_octaves colorize rand_vals
@@ -178,7 +178,7 @@ let cam_setup () =
   let camera =
     Camera.create
       (Vector3.create 350.0 200.0 620.0) (* position *)
-      (Vector3.create 300.0 350.0 ~-.70.0) (* target *)
+      (Vector3.create 300.0 300.0 0.0) (* target *)
       (Vector3.create 0.0 1.0 50.0) (* up *)
       90.0 (* FOV *) CameraProjection.Perspective
   in
@@ -268,9 +268,9 @@ let draw_slider curr_res =
 let in_slider_range x_pos y_pos =
   x_pos >= 30 && x_pos <= 130 && y_pos >= 200 && y_pos <= 220
 
-(** [draw_ui seed] creates the user interface to display basic functions and the
-    current [seed] the perlin noise is based on *)
-let draw_ui seed res =
+(** [draw_ui seed res] creates the user interface to display basic functions and
+    the current [seed] the perlin noise is based on, with slider of size [res] *)
+let draw_main_ui seed res =
   draw_rectangle 10 10 150 250 Color.white;
   draw_text ("Current Seed: " ^ string_of_int seed) 35 30 10 Color.black;
   draw_text ("Input Seed: " ^ !input_seed) 35 40 10 Color.black;
@@ -280,11 +280,22 @@ let draw_ui seed res =
   draw_text "S: Bluegreen Noise" 35 90 10 Color.black;
   draw_text "D: Landscape Noise" 35 100 10 Color.black;
   draw_text "F: Rust Noise" 35 110 10 Color.black;
-  draw_text "SPACE: Play/Pause" 35 120 10 Color.black;
-  draw_text "Mutations" 80 130 10 Color.black;
+  draw_text "P: Exit Playground" 35 120 10 Color.black;
+  draw_text "SPACE: Play/Pause" 35 130 10 Color.black;
+  draw_text "Mutations" 80 140 10 Color.black;
   if !not_clicked then
     draw_text "* Drag Mouse To Move Camera *" 600 10 20 Color.brown;
   draw_slider (int_of_float res);
+  end_drawing ()
+
+let draw_play_ui () =
+  draw_rectangle 10 10 150 250 Color.white;
+  draw_text "PLAYGROUND" 50 50 10 Color.black;
+  draw_text "Q: Small Brush" 35 70 10 Color.black;
+  draw_text "W: Medium Brush" 35 80 10 Color.black;
+  draw_text "E: Large Brush" 35 90 10 Color.black;
+  draw_text "R: Huge Brush" 35 100 10 Color.black;
+  draw_text "P: Exit Playground" 35 110 10 Color.black;
   end_drawing ()
 
 (** [new_mat seed] creates a new perlin noise matrix utilizing a random table
@@ -306,9 +317,42 @@ let change_logic () =
   in
   bounds ()
 
-(** [loop mat seed camera] is the main game loop which repeatedly draws the
-    [mat] created by the specified [seed] projected onto 3D space by the
-    [camera] *)
+let blank_mat () = Matrix.basic_matrix 600 600 (Color.create 0 0 0 255)
+
+let top_down_cam () =
+  Camera.create
+    (Vector3.create 300.0 300.0 300.0) (* position *)
+    (Vector3.create 300.0 300.0 0.0) (* target *)
+    (Vector3.create 0.0 1.0 50.0) (* up *)
+    90.0 (* FOV *) CameraProjection.Perspective
+
+let updated_entry mat x y =
+  let new_col = Color.g (Matrix.get_entry x y mat) + 10 in
+  if new_col >= 250 then Color.create 250 250 250 255
+  else Color.create new_col new_col new_col 255
+
+(** [update_multiple mat x y n n_hold] updates an [n]x[n] grid of the matrix
+    [mat] with an incremented color. [n_hold] holds the initial value of [n] so
+    cubes can be created. *)
+let rec update_multiple mat x y n n_hold =
+  let rec add_to_y mat x y n =
+    if n <= 0 || y >= 600 then mat
+    else
+      let rec add_to_x mat x y n =
+        if n <= 0 || x >= 600 then mat
+        else
+          let entry = updated_entry mat x y in
+          let new_mat = Matrix.add_entry x y entry mat in
+          add_to_x new_mat (x + 1) y (n - 1)
+      in
+      let up_mat = add_to_x mat x y n_hold in
+      add_to_y up_mat x (y + 1) (n - 1)
+  in
+  add_to_y mat x y n
+
+(** [loop mat seed color_rule camera] is the main game loop which repeatedly
+    draws the [mat] created by the specified [seed] projected onto 3D space by
+    the [camera], colored by [color_rule] *)
 let rec loop mat seed color_rule camera =
   let open Raylib in
   if window_should_close () then close_window ()
@@ -321,6 +365,9 @@ let rec loop mat seed color_rule camera =
     | Key.S -> loop mat seed rule_bluegreenscale camera
     | Key.D -> loop mat seed rule_landscape camera
     | Key.F -> loop mat seed rule_rust camera
+    | Key.P ->
+        input_res := 5.;
+        enter_playground (blank_mat ()) (top_down_cam ()) 30
     | Key.Enter -> draw_input mat seed color_rule camera
     | Key.Space -> play_movement mat seed color_rule camera
     | key ->
@@ -329,14 +376,14 @@ let rec loop mat seed color_rule camera =
         update_seed_input key;
         change_logic ();
         draw_perlin camera mat !input_res color_rule;
-        draw_ui seed !input_res;
+        draw_main_ui seed !input_res;
         loop mat seed color_rule camera
 
 (** [draw_random mat color_rule camera] updates the noise with random seed *)
 and draw_random mat color_rule camera =
   let new_seed = Raylib.get_random_value 0 1000 in
   draw_perlin camera mat !input_res color_rule;
-  draw_ui new_seed !input_res;
+  draw_main_ui new_seed !input_res;
   loop (new_mat new_seed) new_seed color_rule camera
 
 (** [draw_input mat color_rule camera] updates the noise with user inputted seed
@@ -344,7 +391,7 @@ and draw_random mat color_rule camera =
 and draw_input mat seed color_rule camera =
   (* Makes the inputted seed display on screen if valid integer *)
   draw_perlin camera mat !input_res color_rule;
-  draw_ui seed !input_res;
+  draw_main_ui seed !input_res;
   match int_of_string !input_seed with
   | s ->
       input_seed := "";
@@ -360,13 +407,13 @@ and mouse_logic mat seed color_rule camera =
   if in_slider_range (get_mouse_x ()) (get_mouse_y ()) then (
     (* Slider Logic *) input_res := float_of_int (get_mouse_x () - 25);
     draw_perlin camera mat !input_res color_rule;
-    draw_ui seed !input_res;
+    draw_main_ui seed !input_res;
     loop mat seed color_rule camera)
   else (
     (* Camera Movement Logic *)
     update_camera (addr camera) CameraMode.Third_person;
     draw_perlin camera mat !input_res color_rule;
-    draw_ui seed !input_res;
+    draw_main_ui seed !input_res;
     loop mat seed color_rule camera)
 
 (** [play_movement mat seed color_rule camera] updates the noise to either pause
@@ -379,5 +426,27 @@ and play_movement mat seed color_rule camera =
   | Plus Pause -> over_time := (index, Plus Resume)
   | Minus Pause -> over_time := (index, Minus Resume));
   loop mat seed color_rule camera
+
+and enter_playground mat camera brush_size =
+  if window_should_close () then close_window ();
+  draw_perlin camera mat !input_res rule_grayscale;
+  draw_play_ui ();
+  match get_key_pressed () with
+  | Key.P -> loop mat 0 rule_grayscale (cam_setup ())
+  | Key.Q -> enter_playground mat camera 10
+  | Key.W -> enter_playground mat camera 30
+  | Key.E -> enter_playground mat camera 50
+  | Key.R -> enter_playground mat camera 100
+  | _ ->
+      if is_mouse_button_down MouseButton.Left then
+        let x_val = get_mouse_x () - 200 in
+        let y_val = get_mouse_y () in
+        if x_val >= 0 && x_val <= 600 && y_val >= 0 && y_val <= 600 then
+          let new_mat =
+            update_multiple mat x_val (600 - y_val) brush_size brush_size
+          in
+          enter_playground new_mat camera brush_size
+        else enter_playground mat camera brush_size
+      else enter_playground mat camera brush_size
 
 let () = cam_setup () |> loop (new_mat 5) 5 rule_grayscale
