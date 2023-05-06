@@ -280,7 +280,7 @@ let draw_main_ui seed res =
   draw_text "S: Bluegreen Noise" 35 90 10 Color.black;
   draw_text "D: Landscape Noise" 35 100 10 Color.black;
   draw_text "F: Rust Noise" 35 110 10 Color.black;
-  draw_text "P: Exit Playground" 35 120 10 Color.black;
+  draw_text "P: Enter Playground" 35 120 10 Color.black;
   draw_text "SPACE: Play/Pause" 35 130 10 Color.black;
   draw_text "Mutations" 80 140 10 Color.black;
   if !not_clicked then
@@ -296,6 +296,8 @@ let draw_play_ui () =
   draw_text "E: Large Brush" 35 90 10 Color.black;
   draw_text "R: Huge Brush" 35 100 10 Color.black;
   draw_text "P: Exit Playground" 35 110 10 Color.black;
+  draw_text "Press on Canvas" 25 150 15 Color.black;
+  draw_text "to Draw" 60 165 15 Color.black;
   end_drawing ()
 
 (** [new_mat seed] creates a new perlin noise matrix utilizing a random table
@@ -427,6 +429,9 @@ and play_movement mat seed color_rule camera =
   | Minus Pause -> over_time := (index, Minus Resume));
   loop mat seed color_rule camera
 
+(** [enter_playground mat camera brush_size] creates a top-down view of a blank
+    canvas where user clicks can incrementally draw noise directly on it with a
+    size of [brush_size] *)
 and enter_playground mat camera brush_size =
   if window_should_close () then close_window ();
   draw_perlin camera mat !input_res rule_grayscale;
