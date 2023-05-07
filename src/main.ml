@@ -1,5 +1,3 @@
-(** Implements the main perlin noise random value generation *)
-
 open Matrix
 open Vector
 
