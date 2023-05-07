@@ -165,8 +165,9 @@ let rec pixel_mat_fbm rgb_mat d_mat x y size n_octaves colorize rand_vals =
          rgb_mat)
       d_mat (x + 1) y size n_octaves colorize rand_vals
 
-(** [grid_fbm x y size] is a color matrix of dimensions [size] by [size] with
-    entries starting from the [x] and [y] positions. *)
+(** [grid_fbm x y size n_octaves colorize rand_vals] is a color matrix of
+    dimensions [size] by [size] with entries starting from the [x] and [y]
+    positions. *)
 let rec grid_fbm x y size n_octaves colorize rand_vals =
   let dmat = distance_matrix (basic_matrix size) size x y in
   pixel_mat_fbm (gray_matrix size) dmat 0 0 size n_octaves colorize rand_vals
@@ -288,6 +289,7 @@ let draw_main_ui seed res =
   draw_slider (int_of_float res);
   end_drawing ()
 
+(** [draw_play_ui ()] creates the user interface for playground mode *)
 let draw_play_ui () =
   draw_rectangle 10 10 150 250 Color.white;
   draw_text "PLAYGROUND" 50 50 10 Color.black;
@@ -388,8 +390,8 @@ and draw_random mat color_rule camera =
   draw_main_ui new_seed !input_res;
   loop (new_mat new_seed) new_seed color_rule camera
 
-(** [draw_input mat color_rule camera] updates the noise with user inputted seed
-    if valid. If input is empty, seed unchanged. *)
+(** [draw_input mat seed color_rule camera] updates the noise with user inputted
+    seed if valid. If input is empty, seed unchanged. *)
 and draw_input mat seed color_rule camera =
   (* Makes the inputted seed display on screen if valid integer *)
   draw_perlin camera mat !input_res color_rule;

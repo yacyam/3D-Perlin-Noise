@@ -1,3 +1,5 @@
+(** Implements an m by n matrix which supports entry and row operations *)
+
 type 'a t
 (** ['a t] represents a matrix with elements of type 'a *)
 
