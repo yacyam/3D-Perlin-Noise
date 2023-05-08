@@ -298,8 +298,8 @@ let draw_play_ui () =
   draw_text "E: Large Brush" 35 90 10 Color.black;
   draw_text "R: Huge Brush" 35 100 10 Color.black;
   draw_text "P: Exit Playground" 35 110 10 Color.black;
-  draw_text "Press on Canvas" 25 150 15 Color.black;
-  draw_text "to Draw" 60 165 15 Color.black;
+  draw_text "Left Click: Draw" 25 150 15 Color.black;
+  draw_text "Right Click: Erase" 20 165 15 Color.black;
   end_drawing ()
 
 (** [new_mat seed] creates a new perlin noise matrix utilizing a random table
@@ -330,22 +330,24 @@ let top_down_cam () =
     (Vector3.create 0.0 1.0 50.0) (* up *)
     90.0 (* FOV *) CameraProjection.Perspective
 
-let updated_entry mat x y =
-  let new_col = Color.g (Matrix.get_entry x y mat) + 10 in
+let updated_entry mat x y height =
+  let new_col = Color.g (Matrix.get_entry x y mat) + height in
   if new_col >= 250 then Color.create 250 250 250 255
+  else if new_col <= 0 then Color.create 5 5 5 255
   else Color.create new_col new_col new_col 255
 
 (** [update_multiple mat x y n n_hold] updates an [n]x[n] grid of the matrix
-    [mat] with an incremented color. [n_hold] holds the initial value of [n] so
-    cubes can be created. *)
-let rec update_multiple mat x y n n_hold =
+    [mat] with an incremented color of [height] height. *)
+let rec update_multiple mat x y n height =
+  (* [n_hold] holds the initial value of [n] so cubes can be created. *)
+  let n_hold = n in
   let rec add_to_y mat x y n =
     if n <= 0 || y >= 600 then mat
     else
       let rec add_to_x mat x y n =
         if n <= 0 || x >= 600 then mat
         else
-          let entry = updated_entry mat x y in
+          let entry = updated_entry mat x y height in
           let new_mat = Matrix.add_entry x y entry mat in
           add_to_x new_mat (x + 1) y (n - 1)
       in
@@ -445,13 +447,16 @@ and enter_playground mat camera brush_size =
   | Key.E -> enter_playground mat camera 50
   | Key.R -> enter_playground mat camera 100
   | _ ->
-      if is_mouse_button_down MouseButton.Left then
-        let x_val = get_mouse_x () - 200 in
-        let y_val = get_mouse_y () in
-        if x_val >= 0 && x_val <= 600 && y_val >= 0 && y_val <= 600 then
-          let new_mat =
-            update_multiple mat x_val (600 - y_val) brush_size brush_size
-          in
+      let x_val = get_mouse_x () - 200 in
+      let y_val = 600 - get_mouse_y () in
+      if x_val >= 0 && x_val <= 600 && y_val >= 0 && y_val <= 600 then
+        if is_mouse_button_down MouseButton.Left then
+          (* Pushes perlin up *)
+          let new_mat = update_multiple mat x_val y_val brush_size 10 in
+          enter_playground new_mat camera brush_size
+        else if is_mouse_button_down MouseButton.Right then
+          (* Pushes perlin down *)
+          let new_mat = update_multiple mat x_val y_val brush_size (-10) in
           enter_playground new_mat camera brush_size
         else enter_playground mat camera brush_size
       else enter_playground mat camera brush_size

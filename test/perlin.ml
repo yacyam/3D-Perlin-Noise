@@ -64,29 +64,45 @@ let norm_angle_test (name : string) (input : vector) : test =
 
 let get_x_tests =
   [
-    get_x_test "zero" (0., -10., -100.) 0.;
-    get_x_test "negative" (-1., -2., -2.) (-1.);
-    get_x_test "positive" (1., 2., 2.) 1.;
-    get_x_test "min_float" (Float.min_float, 1., 2.) Float.min_float;
-    get_x_test "max_float" (Float.max_float, -1., -2.) Float.max_float;
+    get_x_test "[x] zero" (0., -10., -100.) 0.;
+    get_x_test "[x] negative" (-1., -2., -2.) (-1.);
+    get_x_test "[x] positive" (1., 2., 2.) 1.;
+    get_x_test "[x] min_float" (Float.min_float, 1., 2.) Float.min_float;
+    get_x_test "[x] max_float" (Float.max_float, -1., -2.) Float.max_float;
+    get_x_test "[x] all min"
+      (Float.min_float, Float.min_float, Float.min_float)
+      Float.min_float;
+    get_x_test "[x] all max"
+      (Float.max_float, Float.max_float, Float.max_float)
+      Float.max_float;
+    get_x_test "[x] all zero" (0., 0., 0.) 0.;
+    get_x_test "[x] pos and neg" (-1., 3., 4.) ~-.1.;
   ]
 
 let get_y_tests =
   [
-    get_y_test "zero" (-10., 0., -100.) 0.;
-    get_y_test "negative" (-2., -1., -2.) (-1.);
-    get_y_test "positive" (2., 1., 2.) 1.;
-    get_y_test "min_float" (1., Float.min_float, 2.) Float.min_float;
-    get_y_test "max_float" (-1., Float.max_float, -2.) Float.max_float;
+    get_y_test "[y] zero" (-10., 0., -100.) 0.;
+    get_y_test "[y] negative" (-2., -1., -2.) (-1.);
+    get_y_test "[y] positive" (2., 1., 2.) 1.;
+    get_y_test "[y] min_float" (1., Float.min_float, 2.) Float.min_float;
+    get_y_test "[y] max_float" (-1., Float.max_float, -2.) Float.max_float;
+    get_y_test "[y] pos and neg" (Float.max_float, -13., 4.) ~-.13.;
+    get_y_test "y only extreme" (1., -13423.24, 1.2) ~-.13423.24;
   ]
 
 let get_z_tests =
   [
-    get_z_test "zero" (-10., -100., 0.) 0.;
-    get_z_test "negative" (-2., -2., -1.) (-1.);
-    get_z_test "positive" (2., 2., 1.) 1.;
-    get_z_test "min_float" (1., 2., Float.min_float) Float.min_float;
-    get_z_test "max_float" (-1., -2., Float.max_float) Float.max_float;
+    get_z_test "[z] zero" (-10., -100., 0.) 0.;
+    get_z_test "[z] negative" (-2., -2., -1.) (-1.);
+    get_z_test "[z] positive" (2., 2., 1.) 1.;
+    get_z_test "[z] min_float" (1., 2., Float.min_float) Float.min_float;
+    get_z_test "[z] max_float" (-1., -2., Float.max_float) Float.max_float;
+    get_z_test "[z] all max"
+      (Float.max_float, Float.max_float, Float.max_float)
+      Float.max_float;
+    get_z_test "[z] very tiny nums"
+      (0.00023021, 0.2321202, 0.00000000042)
+      0.00000000042;
   ]
 
 let dot_tests =
@@ -100,6 +116,14 @@ let dot_tests =
     dot_test "mixed negative and positive"
       ((-1., 2., 3.), (-3., 1., -0.25))
       4.25;
+    dot_test "orthogonal dots is 0" ((1., 1., 0.), (1., -1., 0.)) 0.;
+    dot_test "unit dot unit is 1" ((1., 0., 0.), (1., 0., 0.)) 1.;
+    dot_test "dot zero and max floats is 0"
+      ((0., 0., 0.), (Float.max_float, Float.max_float, Float.max_float))
+      0.;
+    dot_test "dot zero and min floats is 0"
+      ((0., 0., 0.), (Float.min_float, Float.min_float, Float.min_float))
+      0.;
   ]
 
 let magnitude_tests =
@@ -109,6 +133,8 @@ let magnitude_tests =
     magnitude_test "negative" (-3., -4., -5.) (5. *. sqrt 2.);
     magnitude_test "irrationals" (sqrt 2., 1., sqrt 3. /. 2.) (sqrt 3.75);
     magnitude_test "mixed positive and negative" (-8.1, 1.3, -2.5) (sqrt 73.55);
+    magnitude_test "max float mag" (Float.max_float, 0., 0.) infinity;
+    magnitude_test "min float mag" (Float.min_float, 0., 0.) 0.;
   ]
 
 let norm_tests =
@@ -117,6 +143,11 @@ let norm_tests =
     norm_angle_test "norm preserves angle" (1., 2., 0.);
     norm_magnitude_test "unit property of norm" (2.1, -122., 0.52);
     norm_angle_test "norm preserves angle" (2.1, -122., 0.52);
+    norm_magnitude_test "norm of large floats" (1324321431., 3., 12.);
+    norm_magnitude_test "norm of min floats"
+      (Float.min_float, 3., Float.min_float);
+    norm_magnitude_test "angle of min floats preserved"
+      (Float.min_float, 3., Float.min_float);
   ]
 
 (*let angle_tests = [ angle_test "zero" ((0., 0., 0.), (0., 0., 0.)) 0.;
@@ -192,6 +223,14 @@ let basic_matrix_tests =
         [ (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.) ];
         [ (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.) ];
       ];
+    basic_matrix_test "3 row col of red val color matrix" 3 3
+      (Raylib.Color.r (Raylib.Color.create 255 255 255 255))
+      (let white = Raylib.Color.r (Raylib.Color.create 255 255 255 255) in
+       [
+         [ white; white; white ];
+         [ white; white; white ];
+         [ white; white; white ];
+       ]);
   ]
 
 let basic_5b5_mat () = basic_matrix 5 5 0
@@ -211,6 +250,8 @@ let add_entry_test (name : string) (rows : int) (cols : int) (entry : 'a)
   assert_equal expected_output
     (add_entry rows cols entry (matrix ()) |> to_list)
     ~printer:(to_string_list string_of_int)
+
+let little_wide () = basic_matrix 1 10 0
 
 let add_entry_tests =
   [
@@ -248,6 +289,15 @@ let add_entry_tests =
         [ 0; 0; 0; 0; 0 ];
         [ 10; 0; 0; 0; 10 ];
       ];
+    add_entry_test "add 10 to right-most column 5x5 integer matrix" 2 4 10
+      basic_5b5_4
+      [
+        [ 10; 0; 0; 0; 0 ];
+        [ 0; 0; 0; 0; 0 ];
+        [ 0; 0; 0; 0; 10 ];
+        [ 0; 0; 0; 0; 0 ];
+        [ 10; 0; 0; 0; 10 ];
+      ];
     add_entry_test "add 10 to middle 5x5 integer matrix" 2 2 10 basic_5b5_5
       [
         [ 10; 0; 0; 0; 10 ];
@@ -256,11 +306,21 @@ let add_entry_tests =
         [ 0; 0; 0; 0; 0 ];
         [ 10; 0; 0; 0; 10 ];
       ];
+    add_entry_test "add 10 to beginning litte_wide mat" 0 0 10 little_wide
+      [ [ 10; 0; 0; 0; 0; 0; 0; 0; 0; 0 ] ];
+    add_entry_test "add 10 to end litte_wide mat" 0 9 10 little_wide
+      [ [ 0; 0; 0; 0; 0; 0; 0; 0; 0; 10 ] ];
+    add_entry_test "add 10 to middle litte_wide mat" 0 4 10 little_wide
+      [ [ 0; 0; 0; 0; 10; 0; 0; 0; 0; 0 ] ];
   ]
 
 let get_row_test (name : string) (row : int) (matrix : 'a Matrix.t)
     (expected_output : 'a list) =
   name >:: fun _ -> assert_equal expected_output (get_row row matrix)
+
+(* Helpful to test out large matrices for perlin alg *)
+let huge_matrix = basic_matrix 1000 1000 1
+let very_skinny = basic_matrix 10000 1 0
 
 let get_row_tests =
   [
@@ -270,12 +330,20 @@ let get_row_tests =
       (basic_5b5_5 ()) [ 10; 0; 0; 0; 10 ];
     get_row_test "3rd row of altered 5x5 matrix has 10 in middle" 2
       (basic_5b5_6 ()) [ 0; 0; 10; 0; 0 ];
+    get_row_test "2nd row of altered 5x5 matrix has 0 in all" 1 (basic_5b5_6 ())
+      [ 0; 0; 0; 0; 0 ];
+    get_row_test "4th row of altered 5x5 matrix has 0 in all" 3 (basic_5b5_6 ())
+      [ 0; 0; 0; 0; 0 ];
     get_row_test "10th row of skinny matrix is a single element" 9
       (skinny_matrix ())
       [ (0., 0., 0.) ];
     get_row_test "1st row of skinny matrix is a single element" 0
       (skinny_matrix ())
       [ (0., 0., 0.) ];
+    get_row_test "1st row of very skinny matrix is single element" 0 very_skinny
+      [ 0 ];
+    get_row_test "10000th row of very skinny matrix is single element" 9999
+      very_skinny [ 0 ];
   ]
 
 let add_row_test (name : string) (row_list : 'a list) (matrix : 'a Matrix.t)
@@ -299,6 +367,10 @@ let add_row_tests =
     add_row_test "adding row to empty matrix makes it 1xn of any elem"
       [ ""; ""; "" ] empty
       [ [ ""; ""; "" ] ];
+    add_row_test "adding row containing row to matrix makes it 1xn of row"
+      [ [ ""; ""; "" ]; [ ""; ""; ""; "" ] ]
+      empty
+      [ [ [ ""; ""; "" ]; [ ""; ""; ""; "" ] ] ];
     add_row_test "adding row to empty matrix makes it 1xn of any elem (vector)"
       [
         (0., 3., 1.4);
@@ -327,10 +399,15 @@ let row_length_tests =
   [
     row_length_test "empty matrix should be of length 0" empty 0;
     row_length_test "basic 5x5 matrix should be length 5" (basic_5b5_mat ()) 5;
+    row_length_test "altered 5x5 matrix should still be length 5"
+      (basic_5b5_6 ()) 5;
     row_length_test "skinny matrix should be length 10" (skinny_matrix ()) 10;
     row_length_test "wide matrix should be length 1" (wide_matrix ()) 1;
+    row_length_test "very skinny matrix should be length 10000" very_skinny
+      10000;
     row_length_test "basic 5x5 with added elements should stay length 5"
       (basic_5b5_6 ()) 5;
+    row_length_test "huge matrix should have length 1000" huge_matrix 1000;
   ]
 
 let get_entry_test (name : string) (row : int) (col : int)
@@ -343,11 +420,39 @@ let get_entry_tests =
       (basic_5b5_mat ()) 0;
     get_entry_test "top left element of basic 5x5 is 0" 0 0 (basic_5b5_mat ()) 0;
     get_entry_test "middle element of added 5x5 is 10" 2 2 (basic_5b5_6 ()) 10;
+    get_entry_test "bottom left element of added 5x5 is 10" 4 0 (basic_5b5_6 ())
+      10;
+    get_entry_test "top right element of added 5x5 is 10" 0 4 (basic_5b5_6 ())
+      10;
     get_entry_test "50th element of first row wide matrix is (empty string)" 0
       49 (wide_matrix ()) "";
+    get_entry_test "1st element of first row wide matrix is (empty string)" 0 0
+      (wide_matrix ()) "";
+    get_entry_test "100th element of first row wide matrix is (empty string)" 0
+      99 (wide_matrix ()) "";
+    get_entry_test "1st element of first row wide matrix is (empty string)" 0 0
+      (wide_matrix ()) "";
     get_entry_test "7th row of skinny matrix is zero vector" 6 0
       (skinny_matrix ()) (0., 0., 0.);
+    get_entry_test "10th row of skinny matrix is zero vector" 9 0
+      (skinny_matrix ()) (0., 0., 0.);
+    get_entry_test "1st row of skinny matrix is zero vector" 0 0
+      (skinny_matrix ()) (0., 0., 0.);
+    get_entry_test "10000th row 1st col of very skinny matrix is zero " 9999 0
+      very_skinny 0;
+    get_entry_test "1st row 1st col of very skinny matrix is zero " 0 0
+      very_skinny 0;
     get_entry_test "2nd row 4th col of added 2b5 mat is 7" 1 3 (added_2b5 ()) 7;
+    get_entry_test "1st elem of 1st row col of huge matrix is 1" 0 0 huge_matrix
+      1;
+    get_entry_test "1000th row 1000th column of huge matrix is 1" 999 999
+      huge_matrix 1;
+    get_entry_test "1000th row 1st column of huge matrix is 1" 999 0 huge_matrix
+      1;
+    get_entry_test "1st row 1000th column of huge matrix is 1" 0 999 huge_matrix
+      1;
+    get_entry_test "500th row 500th column of huge matrix is 1" 499 499
+      huge_matrix 1;
   ]
 
 let matrix_tests =
@@ -374,6 +479,7 @@ let dot_grad_dist_tests =
     dot_grad_dist_test "rotated pi/2" 1 (-10.2, -4., 0.) 6.2;
     dot_grad_dist_test "rotated pi" 3 (-9.2, 2., 0.) 7.2;
     dot_grad_dist_test "rotated 3pi/2" 2 (1.3, -2., 0.) 3.3;
+    dot_grad_dist_test "rand val bounded" 1243123 (12., 13., 0.) ~-.25.;
   ]
 
 let interpolate_test (name : string) (u_l : float) (u_r : float) (l_l : float)
