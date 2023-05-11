@@ -33,6 +33,11 @@ let dot_test (name : string) ((input1, input2) : vector * vector)
   name >:: fun _ ->
   assert_equal expected_output (dot input1 input2) ~printer:string_of_float
 
+let cross_test (name : string) ((input1, input2) : vector * vector)
+    (expected_output : string) : test =
+  name >:: fun _ ->
+  assert_equal expected_output (Vector.to_string (cross input1 input2))
+
 (** [magnitude_test name input expected_output] constructs an OUnit test named
     [name] that asserts the quality of [expected_output] with [magnitude input]. *)
 let magnitude_test (name : string) (input : vector) (expected_output : float) :
@@ -126,6 +131,28 @@ let dot_tests =
       0.;
   ]
 
+let cross_tests =
+  [
+    cross_test "cross product of zero vector and non-zero"
+      ((0., 0., 0.), (1., 2., 3.))
+      "(0., 0., 0.)";
+    cross_test "cross product of two zero vectors"
+      ((0., 0., 0.), (0., 0., 0.))
+      "(0., 0., 0.)";
+    cross_test "cross product of same positive vector"
+      ((3.5, 1.2, 1.), (3.5, 1.2, 1.))
+      "(0., 0., 0.)";
+    cross_test "cross product of same negative vector"
+      ((-2., -1., -5.9), (-2., -1., -5.9))
+      "(0., 0., 0.)";
+    cross_test "cross product of two orthogonal vectors"
+      ((1., 0., 0.), (0., 1., 0.))
+      "(0., 0., 1.)";
+    cross_test "cross product of two vectors"
+      ((-10., 0., 3.), (3.8, -9., 1.))
+      "(27., 21.4, 90.)";
+  ]
+
 let magnitude_tests =
   [
     magnitude_test "zero" (0., 0., 0.) 0.;
@@ -162,6 +189,7 @@ let vector_tests =
       get_y_tests;
       get_z_tests;
       dot_tests;
+      cross_tests;
       magnitude_tests;
       norm_tests;
     ]

@@ -27,3 +27,7 @@ let norm (x, y, z) =
 (*(** [angle (x, y, z) (a, b, c)] Finds the angle between the two vectors (float
   between 0 and pi in radians). *) let angle (x, y, z) (a, b, c) = dot (x, y, z)
   (a, b, c) /. (magnitude (x, y, z) +. magnitude (a, b, c)) |> acos*)
+
+let to_string (x, y, z) =
+  "(" ^ string_of_float x ^ ", " ^ string_of_float y ^ ", " ^ string_of_float z
+  ^ ")"

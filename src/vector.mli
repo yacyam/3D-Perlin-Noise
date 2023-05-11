@@ -26,3 +26,6 @@ val norm : vector -> vector
     as the input vector. Requires: The magnitude is not 0. *)
 
 (*val angle : vector -> vector -> float*)
+
+val to_string : vector -> string
+(** [to_string (x, y, z)] is "(x, y, z)" *)
