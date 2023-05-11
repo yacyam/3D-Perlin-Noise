@@ -9,14 +9,11 @@ First: Install OPAM and OCaml
   - Make sure at the very end you're able to run utop within your terminal,
     and if not, make sure to follow the debugging tools in the textbook guide.
 
+Second: Update opam
+  - Make sure to run opam update and opam upgrade to make sure you're on the
+    latest version of opam before installing.
 
-Second: Run opam install graphics in Command Line
-  - Accept all prompts given while installing graphics to opam, and when 
-    prompted to install XQuartz, accept, and let installation finish
-  - Once finished, completely reboot your computer to allow for XQuartz 
-    to initialize on startup, make sure that when you run opam list in command line,
-    graphics is underlined
-  - Once XQuartz is initialized, through Command Line, make the toplevel for this 
-    folder the current directory, run make build and then make utop to display the
-    software on the screen
+Second: Run opam install raylib
+  - Accept all prompts given while installing raylib to opam, and let
+    the installation fully finish.
 

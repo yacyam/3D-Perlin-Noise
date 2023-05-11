@@ -223,6 +223,7 @@ let basic_matrix_tests =
         [ (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.) ];
         [ (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.); (0., 0., 0.) ];
       ];
+    (* Tests for making color matrices *)
     basic_matrix_test "3 row col of red val color matrix" 3 3
       (Raylib.Color.r (Raylib.Color.create 255 255 255 255))
       (let white = Raylib.Color.r (Raylib.Color.create 255 255 255 255) in
@@ -231,6 +232,14 @@ let basic_matrix_tests =
          [ white; white; white ];
          [ white; white; white ];
        ]);
+    basic_matrix_test "2 row col of green val color matrix" 2 2
+      (Raylib.Color.g (Raylib.Color.create 120 120 120 255))
+      (let white = Raylib.Color.g (Raylib.Color.create 120 120 120 255) in
+       [ [ white; white ]; [ white; white ] ]);
+    basic_matrix_test "2 row 3 col of blue val color matrix" 2 3
+      (Raylib.Color.b (Raylib.Color.create 12 130 220 255))
+      (let white = Raylib.Color.b (Raylib.Color.create 12 130 220 255) in
+       [ [ white; white; white ]; [ white; white; white ] ]);
   ]
 
 let basic_5b5_mat () = basic_matrix 5 5 0
@@ -389,6 +398,15 @@ let add_row_tests =
           (0.53, 3.23, 11.3);
         ];
       ];
+    (let white = Raylib.Color.b (Raylib.Color.create 12 130 220 255) in
+     add_row_test "add color row to empty makes it 1xn" [ white; white; white ]
+       empty
+       [ [ white; white; white ] ]);
+    add_row_test "add single elem to matrix makes it 1x1" [ 1 ] empty [ [ 1 ] ];
+    add_row_test "add list of elems as row makes row of rows"
+      [ [ 1; 3; 5; 7; 9 ]; [ 2; 4; 6; 8; 10 ] ]
+      empty
+      [ [ [ 1; 3; 5; 7; 9 ]; [ 2; 4; 6; 8; 10 ] ] ];
   ]
 
 let row_length_test (name : string) (matrix : 'a Matrix.t)
@@ -453,6 +471,10 @@ let get_entry_tests =
       1;
     get_entry_test "500th row 500th column of huge matrix is 1" 499 499
       huge_matrix 1;
+    get_entry_test "250th row 250th column of huge matrix is 1" 249 249
+      huge_matrix 1;
+    get_entry_test "750th row 750th column of huge matrix is 1" 749 249
+      huge_matrix 1;
   ]
 
 let matrix_tests =
@@ -480,6 +502,7 @@ let dot_grad_dist_tests =
     dot_grad_dist_test "rotated pi" 3 (-9.2, 2., 0.) 7.2;
     dot_grad_dist_test "rotated 3pi/2" 2 (1.3, -2., 0.) 3.3;
     dot_grad_dist_test "rand val bounded" 1243123 (12., 13., 0.) ~-.25.;
+    dot_grad_dist_test "neg val bounded" ~-123 (2., 4., 0.) ~-.6.;
   ]
 
 let interpolate_test (name : string) (u_l : float) (u_r : float) (l_l : float)
@@ -498,7 +521,104 @@ let interpolate_tests =
     interpolate_test "0. fracs" 3.3 4.4 5.5 6.6 0. 0. 5.5;
   ]
 
-let main_tests = List.flatten [ dot_grad_dist_tests; interpolate_tests ]
+(* size of actual grid for perlin alg *)
+let basic_mat = basic_dist_mat 600
+
+let basic_dist_mat_tests =
+  [
+    get_entry_test "first entry basic dist is 0 vector" 0 0 basic_mat
+      (0., 0., 0.);
+    get_entry_test "last entry basic dist is 0 vector" 599 599 basic_mat
+      (0., 0., 0.);
+    get_entry_test "middle elem basic dist is 0 vector" 299 299 basic_mat
+      (0., 0., 0.);
+    row_length_test "size of rows are 600" basic_mat 600;
+  ]
+
+let basic_smaller_mat () = basic_dist_mat 200
+let dist_mat = distance_matrix (basic_smaller_mat ()) 200 0 0
+let weird_dist = distance_matrix (basic_smaller_mat ()) 200 1000 1000
+let diff_x_y_mat = distance_matrix (basic_smaller_mat ()) 200 20 1300
+
+(** [norm_rev (x, y, z)] reverses the normalized vector and rounds so equality
+    can be asserted on integers (floats can't be asserted correctly) *)
+let norm_rev (x, y, z) =
+  ( int_of_float (x *. sqrt 2.),
+    int_of_float (y *. sqrt 2.),
+    int_of_float (z *. sqrt 2.) )
+
+let normalize_dist_test (name : string) (vec : float * float * float)
+    expected_output =
+  name >:: fun _ -> assert_equal expected_output (normalize_dist vec |> norm_rev)
+
+let normalize_dist_tests =
+  [
+    normalize_dist_test "normalized dist when rev should be dist 0 vec"
+      (0., 0., 0.) (0, 0, 0);
+    normalize_dist_test "normalized dist when rev should be dist regular vec"
+      (13., 24., 92.) (13, 24, 92);
+    normalize_dist_test "normalized dist when rev should be dist extreme vec"
+      (99999999., 99999999., 0.) (99999999, 99999999, 0);
+  ]
+
+let dist_entry_test (name : string) (y : int) (x : int) (mat : vector t)
+    (expected_output : int * int * int) =
+  name >:: fun _ -> assert_equal expected_output (get_entry y x mat |> norm_rev)
+
+let distance_matrix_tests =
+  [
+    dist_entry_test "first entry must be of distance 0" 0 0 dist_mat (0, 0, 0);
+    dist_entry_test "last entry must be of distance 199" 199 199 dist_mat
+      (199, 199, 0);
+    dist_entry_test "top left entry must have y dist 199" 199 0 dist_mat
+      (0, 199, 0);
+    dist_entry_test "bottom right entry must have x dist 199" 0 199 dist_mat
+      (199, 0, 0);
+    dist_entry_test "middle entry must have x and y dist 99" 99 99 dist_mat
+      (99, 99, 0);
+    dist_entry_test "regular entry must have diff x and y dist" 34 102 dist_mat
+      (102, 34, 0);
+    dist_entry_test "another regular entry must have diff x and y dist" 154 2
+      dist_mat (2, 154, 0);
+    dist_entry_test "first entry weird must start with 1000" 0 0 weird_dist
+      (1000, 1000, 0);
+    dist_entry_test "last entry weird must end with 1199" 199 199 weird_dist
+      (1199, 1199, 0);
+    dist_entry_test "top left entry weird y dist 1199 and x 1000" 199 0
+      weird_dist (1000, 1199, 0);
+    dist_entry_test "top left entry weird y dist 1000 x 1199" 0 199 weird_dist
+      (1199, 1000, 0);
+    dist_entry_test "middle entry weird y dist 1099 x 1099" 99 99 weird_dist
+      (1099, 1099, 0);
+    dist_entry_test "regular entry weird must have diff x and y dist" 174 22
+      weird_dist (1022, 1174, 0);
+    dist_entry_test "another regular entry weird must have diff x and y dist"
+      112 122 weird_dist (1122, 1112, 0);
+    dist_entry_test "first entry is diff x and y start w/ x < y" 0 0
+      diff_x_y_mat (20, 1300, 0);
+    dist_entry_test "last entry is diff x and y end w/ x < y" 199 199
+      diff_x_y_mat (219, 1499, 0);
+    dist_entry_test "top left is diff x and y w/ x at start" 199 0 diff_x_y_mat
+      (20, 1499, 0);
+    dist_entry_test "bottom right is diff x and y w/ y at start" 0 199
+      diff_x_y_mat (219, 1300, 0);
+    dist_entry_test "middle elem is diff x and y at center" 99 99 diff_x_y_mat
+      (119, 1399, 0);
+    dist_entry_test "regular entry is diff x and y w/ x < y" 115 93 diff_x_y_mat
+      (113, 1415, 0);
+    dist_entry_test "another regular entry is diff x and y w/ x < y" 9 148
+      diff_x_y_mat (168, 1309, 0);
+  ]
+
+let main_tests =
+  List.flatten
+    [
+      dot_grad_dist_tests;
+      interpolate_tests;
+      basic_dist_mat_tests;
+      distance_matrix_tests;
+      normalize_dist_tests;
+    ]
 
 let suite =
   "test suite for project"
