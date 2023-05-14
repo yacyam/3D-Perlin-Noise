@@ -10,10 +10,12 @@ First: Install OPAM and OCaml
     and if not, make sure to follow the debugging tools in the textbook guide.
 
 Second: Update opam
-  - Make sure to run opam update and opam upgrade to make sure you're on the
+  - Make sure to run 'opam update' and 'opam upgrade' to make sure you're on the
     latest version of opam before installing.
 
-Second: Run opam install raylib
+Third: Run 'opam install raylib'
   - Accept all prompts given while installing raylib to opam, and let
     the installation fully finish.
+  - Make sure you installed Raylib.1.0.0 or a later version. If not you may still
+    need to run 'opam update' and 'opam upgrade'.
 
