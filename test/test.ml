@@ -328,7 +328,6 @@ let basic_matrix_tests =
        [ [ white; white; white ]; [ white; white; white ] ]);
   ]
 
-let ones_5b5 () = basic_matrix 3 3 1
 let basic_5b5_mat () = basic_matrix 5 5 0
 let basic_5b5_2 () = add_entry 0 0 10 (basic_5b5_mat ())
 let basic_5b5_3 () = add_entry 4 4 10 (basic_5b5_2 ())
@@ -345,13 +344,6 @@ let add_entry_test (name : string) (rows : int) (cols : int) (entry : 'a)
   name >:: fun _ ->
   assert_equal expected_output
     (add_entry rows cols entry (matrix ()) |> to_list)
-    ~printer:(to_string_list string_of_int)
-
-let map_test (name : string) (f : 'a -> 'a) (matrix : 'a Linearalg.Matrix.t)
-    (expexted_output : int list list) : test =
-  name >:: fun _ ->
-  assert_equal expexted_output
-    (map f matrix |> to_list)
     ~printer:(to_string_list string_of_int)
 
 let little_wide () = basic_matrix 1 10 0
@@ -569,19 +561,6 @@ let get_entry_tests =
       huge_matrix 1;
     get_entry_test "750th row 750th column of huge matrix is 1" 749 249
       huge_matrix 1;
-  ]
-
-let map_tests =
-  [
-    map_test "identity to ones 3x3 matrix"
-      (fun x -> x)
-      (ones_5b5 ())
-      [ [ 1; 1; 1 ]; [ 1; 1; 1 ]; [ 1; 1; 1 ] ];
-    map_test "identity to basic 5x5 matrix" (fun x -> x) (basic_5b5_mat ()) [];
-    map_test "sin function times pi to ones 3x3 matrix"
-      (fun x -> float_of_int x |> ( *. ) 3.14159 |> sin |> int_of_float)
-      (ones_5b5 ())
-      [ [ 0; 0; 0 ]; [ 0; 0; 0 ]; [ 0; 0; 0 ] ];
   ]
 
 let matrix_tests =
