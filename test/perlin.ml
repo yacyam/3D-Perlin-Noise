@@ -3,30 +3,31 @@ open Linearalg
 open Matrix
 open Vector
 open Main
+open ColorRule
 
 (** [get_x_test name input expected_output] constructs an OUnit test named
-    [name] that asserts the quality of [expected_output] with [get_x input]. *)
+    [name] that asserts the equality of [expected_output] with [get_x input]. *)
 let get_x_test (name : string) (input : vector) (expected_output : float) : test
     =
   name >:: fun _ ->
   assert_equal expected_output (get_x input) ~printer:string_of_float
 
 (** [get_y_test name input expected_output] constructs an OUnit test named
-    [name] that asserts the quality of [expected_output] with [get_y input]. *)
+    [name] that asserts the equality of [expected_output] with [get_y input]. *)
 let get_y_test (name : string) (input : vector) (expected_output : float) : test
     =
   name >:: fun _ ->
   assert_equal expected_output (get_y input) ~printer:string_of_float
 
 (** [get_z_test name input expected_output] constructs an OUnit test named
-    [name] that asserts the quality of [expected_output] with [get_z input]. *)
+    [name] that asserts the equality of [expected_output] with [get_z input]. *)
 let get_z_test (name : string) (input : vector) (expected_output : float) : test
     =
   name >:: fun _ ->
   assert_equal expected_output (get_z input) ~printer:string_of_float
 
 (** [dot_test name (input1, input2) expected_output] constructs an OUnit test
-    named [name] that asserts the quality of [expected_output] with
+    named [name] that asserts the equality of [expected_output] with
     [dot input1 input2]. *)
 let dot_test (name : string) ((input1, input2) : vector * vector)
     (expected_output : float) : test =
@@ -39,7 +40,8 @@ let cross_test (name : string) ((input1, input2) : vector * vector)
   assert_equal expected_output (Vector.to_string (cross input1 input2))
 
 (** [magnitude_test name input expected_output] constructs an OUnit test named
-    [name] that asserts the quality of [expected_output] with [magnitude input]. *)
+    [name] that asserts the equality of [expected_output] with
+    [magnitude input]. *)
 let magnitude_test (name : string) (input : vector) (expected_output : float) :
     test =
   name >:: fun _ ->
@@ -270,6 +272,7 @@ let basic_matrix_tests =
        [ [ white; white; white ]; [ white; white; white ] ]);
   ]
 
+let ones_5b5 () = basic_matrix 3 3 1
 let basic_5b5_mat () = basic_matrix 5 5 0
 let basic_5b5_2 () = add_entry 0 0 10 (basic_5b5_mat ())
 let basic_5b5_3 () = add_entry 4 4 10 (basic_5b5_2 ())
@@ -286,6 +289,13 @@ let add_entry_test (name : string) (rows : int) (cols : int) (entry : 'a)
   name >:: fun _ ->
   assert_equal expected_output
     (add_entry rows cols entry (matrix ()) |> to_list)
+    ~printer:(to_string_list string_of_int)
+
+let map_test (name : string) (f : 'a -> 'a) (matrix : 'a Linearalg.Matrix.t)
+    (expexted_output : int list list) : test =
+  name >:: fun _ ->
+  assert_equal expexted_output
+    (map f matrix |> to_list)
     ~printer:(to_string_list string_of_int)
 
 let little_wide () = basic_matrix 1 10 0
@@ -505,6 +515,19 @@ let get_entry_tests =
       huge_matrix 1;
   ]
 
+let map_tests =
+  [
+    map_test "identity to ones 3x3 matrix"
+      (fun x -> x)
+      (ones_5b5 ())
+      [ [ 1; 1; 1 ]; [ 1; 1; 1 ]; [ 1; 1; 1 ] ];
+    map_test "identity to basic 5x5 matrix" (fun x -> x) (basic_5b5_mat ()) [];
+    map_test "sin function times pi to ones 3x3 matrix"
+      (fun x -> float_of_int x |> ( *. ) 3.14159 |> sin |> int_of_float)
+      (ones_5b5 ())
+      [ [ 0; 0; 0 ]; [ 0; 0; 0 ]; [ 0; 0; 0 ] ];
+  ]
+
 let matrix_tests =
   List.flatten
     [
@@ -648,8 +671,157 @@ let main_tests =
       normalize_dist_tests;
     ]
 
+(******************************************************************************)
+(******************************************************************************)
+(******************************************************************************)
+(******************************************************************************)
+
+let color_in_bounds (c : Raylib.Color.t) : string =
+  let r, g, b = (Raylib.Color.r c, Raylib.Color.g c, Raylib.Color.b c) in
+  string_of_int r ^ " " ^ string_of_int g ^ " " ^ string_of_int b
+
+(** [rule_grayscale_test name input expected_output] constructs an OUnit test
+    named [name] that asserts the equality of [expected_output] with
+    [rule_grayscale input]. *)
+let rule_grayscale_test (name : string) (input : int) (expected_output : string)
+    : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (rule_grayscale input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+(** [rule_bluegreenscale_test name input expected_output] is an OUnit test
+    called [name] that asserts equality on [expected_output] with
+    [rule_bluegreenscale input]. *)
+let rule_bluegreenscale_test (name : string) (input : int)
+    (expected_output : string) : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (rule_bluegreenscale input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+(** [rule_landscape_test name input expected_output] is an OUnit test called
+    [name] that asserts equality on [expected_output] with
+    [rule_landscape input]. *)
+let rule_landscape_test (name : string) (input : int) (expected_output : string)
+    : test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (rule_landscape input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+(** [rule_rust_test name input expected_output] is an OUnit test called [name]
+    that asserts equality on [expected_output] with [rule_rust input]. *)
+let rule_rust_test (name : string) (input : int) (expected_output : string) :
+    test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (rule_rust input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+(** [rule_wood_test name input expected_output] is an OUnit test called [name]
+    that asserts equality on [expected_output] with [rule_wood input]. *)
+let rule_wood_test (name : string) (input : int) (expected_output : string) :
+    test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (rule_wood input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+(** [color_gray_test input expected_output] is an OUnit test called [name] that
+    asserts equality on [expected_output] with [color_gray input]. *)
+let color_gray_test (name : string) (input : float) (expected_output : string) :
+    test =
+  name >:: fun _ ->
+  assert_equal expected_output
+    (color_gray input |> color_in_bounds)
+    ~printer:(fun x -> x)
+
+let rule_grayscale_tests =
+  [
+    rule_grayscale_test "lower edge case" 0 "0 0 0";
+    rule_grayscale_test "wrap lower edge case" (-1) "0 0 0";
+    rule_grayscale_test "upper edge case" 255 "255 255 255";
+    rule_grayscale_test "wrap upper edge case" 256 "255 255 255";
+    rule_grayscale_test "upper edge case" 170 "170 170 170";
+  ]
+
+let rule_bluegreenscale_tests =
+  [
+    rule_bluegreenscale_test "lower edge case" 0 "0 0 255";
+    rule_bluegreenscale_test "wrap lower edge case" (-1) "0 0 255";
+    rule_bluegreenscale_test "upper edge case" 255 "0 255 0";
+    rule_bluegreenscale_test "wrap upper edge case" 256 "0 255 0";
+    rule_bluegreenscale_test "upper edge case" 170 "0 170 85";
+  ]
+
+let rule_landscape_tests =
+  [
+    rule_landscape_test "lower edge case" 0 "0 0 40";
+    rule_landscape_test "wrap lower edge case" (-1) "0 0 40";
+    rule_landscape_test "water upper edge case" 99 "0 0 253";
+    rule_landscape_test "sand lower edge case" 100 "180 188 153";
+    rule_landscape_test "sand upper edge case" 110 "240 228 173";
+    rule_landscape_test "land lower edge case" 111 "10 209 60";
+    rule_landscape_test "land upper edge case" 255 "0 50 0";
+    rule_landscape_test "land upper edge case" 256 "0 50 0";
+  ]
+
+let rule_rust_tests =
+  [
+    rule_rust_test "lower edge case" 0 "183 65 14";
+    rule_rust_test "wrap lower edge case" (-1) "183 65 14";
+    rule_rust_test "ring case 128 " 128 "183 65 14";
+    rule_rust_test "wrap upper edge case" 256 "183 65 14";
+    rule_rust_test "level 1 26" 26 "18 6 1";
+    rule_rust_test "level 1 153" 153 "109 39 8";
+    rule_rust_test "level 4 102" 102 "73 26 5";
+    rule_rust_test "level 4 230" 230 "165 58 12";
+    rule_rust_test "ring 1" 1 "183 65 14";
+    rule_rust_test "ring 10" 10 "183 65 14";
+    rule_rust_test "non-ring 100" 100 "56 56 57";
+  ]
+
+let rule_wood_tests =
+  [
+    rule_wood_test "lower edge case" 0 "166 99 64";
+    rule_wood_test "wrap lower edge case" (-1) "166 99 64";
+    rule_wood_test "ring case 26 " 26 "166 99 64";
+    rule_wood_test "ring case 51 " 51 "166 99 64";
+    rule_wood_test "ring case 77 " 77 "166 99 64";
+    rule_wood_test "ring case 102" 102 "166 99 64";
+    rule_wood_test "ring case 128 " 128 "166 99 64";
+    rule_wood_test "ring case 153" 153 "166 99 64";
+    rule_wood_test "ring case 179" 179 "166 99 64";
+    rule_wood_test "ring case 204" 204 "166 99 64";
+    rule_wood_test "ring case 230" 230 "166 99 64";
+    rule_wood_test "upper edge case" 255 "166 99 64";
+    rule_wood_test "wrap upper edge case" 256 "166 99 64";
+    rule_wood_test "ring 1" 1 "166 99 64";
+    rule_wood_test "non-ring 10" 10 "6 3 2";
+    rule_wood_test "non-ring 100" 100 "65 38 25";
+  ]
+
+let color_gray_tests =
+  [
+    color_gray_test "lower bound" (-0.95) "0 0 0";
+    color_gray_test "upper bound" 1.05 "255 255 255";
+    color_gray_test "middles" 0.41 "173 173 173";
+  ]
+
+let colorRule_tests =
+  List.flatten
+    [
+      rule_grayscale_tests;
+      rule_bluegreenscale_tests;
+      rule_landscape_tests;
+      rule_rust_tests;
+      rule_wood_tests;
+      color_gray_tests;
+    ]
+
 let suite =
   "test suite for project"
-  >::: List.flatten [ vector_tests; matrix_tests; main_tests ]
+  >::: List.flatten [ vector_tests; matrix_tests; main_tests; colorRule_tests ]
 
 let _ = run_test_tt_main suite

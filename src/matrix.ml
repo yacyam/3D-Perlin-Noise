@@ -36,6 +36,17 @@ let get_entry row col matrix =
       | exception _ -> failwith "get_entry was called with incorrect col size")
   | exception _ -> failwith "get_entry was called with incorrect row size"
 
+let rec map_helper f matrix row =
+  match Array.get matrix row with
+  | row' ->
+      matrix.(row) <- Array.map f row';
+      map_helper f matrix (row + 1)
+  | exception _ -> ()
+
+let map f matrix =
+  map_helper f matrix 0;
+  matrix
+
 (** [to_string_elems mat_row printer] creates a string for the specific matrix
     row, where [printer] stringifies the element inside matrix *)
 let to_string_elems mat_row printer =

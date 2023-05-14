@@ -1,6 +1,7 @@
 open Raylib
 open Linearalg
 open Vector
+open ColorRule
 
 module RTG = struct
   (** [set_state x] sets the pseudo-random state based on the input seed [x] *)
@@ -22,86 +23,6 @@ module RTG = struct
     in
     loop (Array.make 256 0) 256
 end
-
-(** [convert_grayscale x] takes in a float (random number generated from perlin
-    noise) and outputs a grayscale rgb value based on the range the value [x]
-    encompassed. x should be in 0..255. *)
-let rule_grayscale x = Color.create x x x 255
-
-let color_gray (x : float) : Color.t =
-  let color = Int.abs (int_of_float ((x +. 0.95) /. 2. *. 255.0)) in
-  color |> rule_grayscale
-
-(** [convert_bluegreenscale x] takes in a float (random number generated from
-    perlin noise) and outputs a blue-green rgb scaled value based on [x]. x
-    should be in 0..255. *)
-let rule_bluegreenscale x = Color.create 0 x (255 - x) 255
-
-(** [convert_landmass x] takes in a float (random number generated from perlin
-    noise) and outputs a blue or green rgb scaled value based on [x]. x should
-    be in 0..255. If x is small enough, it outputs a blue scale value, otherwise
-    it's green scale. *)
-let rule_landscape x =
-  let open Color in
-  if x < 100 then
-    create 0 0
-      (40 + int_of_float (Float.round (float_of_int x *. (215. /. 100.))))
-      255
-  else if x > 110 then
-    create
-      (int_of_float
-         (10. -. Float.round (float_of_int (x - 110) *. (10. /. 145.))))
-      (int_of_float
-         (Float.round
-            (160. -. (float_of_int (x - 110) *. (160. /. 145.)) +. 50.)))
-      (int_of_float
-         (60. -. Float.round (float_of_int (x - 110) *. (60. /. 145.))))
-      255
-  else
-    let r, g, b =
-      ( Int.abs
-          (int_of_float (((float_of_int x -. 100.) *. (60. /. 10.)) +. 180.)),
-        Int.abs
-          (int_of_float (((float_of_int x -. 100.) *. (40. /. 10.)) +. 188.)),
-        Int.abs
-          (int_of_float (((float_of_int x -. 100.) *. (20. /. 10.)) +. 153.)) )
-    in
-    create r g b 255
-
-(** [rule_rust x] takes in an int (random number generated from perlin noise)
-    and outputs a brown rgb scaled value based on [x]. x should be in 0..255. *)
-let rule_rust x =
-  let open Color in
-  let level = int_of_float (float_of_int x /. 255. *. 10.) mod 5 in
-  if level = 0 then create 183 65 14 255
-  else if level = 1 || level = 4 then
-    let r, g, b =
-      ( Int.abs (int_of_float (float_of_int x *. 183. /. 255.)),
-        Int.abs (int_of_float (float_of_int x *. 65. /. 255.)),
-        Int.abs (int_of_float (float_of_int x *. 14. /. 255.)) )
-    in
-    create r g b 255
-  else
-    let r, g, b =
-      ( Int.abs (int_of_float (float_of_int x *. 170. /. 300.)),
-        Int.abs (int_of_float (float_of_int x *. 169. /. 300.)),
-        Int.abs (int_of_float (float_of_int x *. 173. /. 300.)) )
-    in
-    create r g b 255
-
-(** [rule_wood x] takes in an int (random number generated from perlin noise)
-    and outputs a brown rgb scaled value based on [x]. x should be in 0..255. *)
-let rule_wood x =
-  let open Color in
-  if int_of_float (float_of_int x /. 255. *. 50.) mod 5 = 0 then
-    create 166 99 64 255
-  else
-    let r, g, b =
-      ( Int.abs (int_of_float (float_of_int x *. 166. /. 255.)),
-        Int.abs (int_of_float (float_of_int x *. 99. /. 255.)),
-        Int.abs (int_of_float (float_of_int x *. 64. /. 255.)) )
-    in
-    create r g b 255
 
 let gray_matrix n = Matrix.basic_matrix n n (Color.create 255 255 255 255)
 
@@ -164,6 +85,18 @@ type change =
 
 let over_time = ref (0, Plus Pause)
 
+type initial_condition =
+  | Known of Color.t Linearalg.Matrix.t
+  | Unknown
+
+type blur_data = {
+  mutable t : float;
+  mutable control : pause;
+  mutable init : initial_condition;
+}
+
+let blur_timer = { t = 0.; control = Pause; init = Unknown }
+
 (** [draw_perlin camera mat res color_rule] draws the perlin noise on a
     three-dimensional axis based on the colors specified by [mat] transformed by
     [color_rule] and the starting [camera] position with the specified
@@ -172,6 +105,11 @@ let draw_perlin camera mat res color_rule =
   begin_drawing ();
   clear_background Color.skyblue;
   begin_mode_3d camera;
+  let () =
+    match blur_timer.init with
+    | Known ic -> ()
+    | Unknown -> blur_timer.init <- Known mat
+  in
   let mat_x = Matrix.row_length mat |> float_of_int in
   let rec draw_seq x y =
     if y >= mat_x then ()
@@ -186,9 +124,42 @@ let draw_perlin camera mat res color_rule =
       let norm_scaler =
         1.0 +. ((Color.g entry_scaler |> float_of_int) /. 255.)
       in
+      let neighbor_contribution =
+        let left =
+          if int_of_float y = 0 then mat_entry
+          else Matrix.get_entry (int_of_float x) (int_of_float y - 1) mat
+        in
+        let right =
+          if int_of_float y = int_of_float mat_x then mat_entry
+          else Matrix.get_entry (int_of_float x) (int_of_float y + 1) mat
+        in
+        let top =
+          if int_of_float x = 0 then mat_entry
+          else Matrix.get_entry (int_of_float x - 1) (int_of_float y) mat
+        in
+        let bottom =
+          if int_of_float x = int_of_float mat_x then mat_entry
+          else Matrix.get_entry (int_of_float x + 1) (int_of_float y) mat
+        in
+        (-4 * Color.g mat_entry)
+        + Color.g left + Color.g right + Color.g top + Color.g bottom
+      in
+      let scaled_mat_entry_value =
+        Color.g mat_entry
+        + (neighbor_contribution * int_of_float (10. *. sin blur_timer.t))
+      in
+      let scaled_mat_entry_value =
+        if scaled_mat_entry_value < 0 then 0
+        else if scaled_mat_entry_value > 255 then 255
+        else scaled_mat_entry_value
+      in
+      let scaled_mat_entry =
+        Color.create scaled_mat_entry_value scaled_mat_entry_value
+          scaled_mat_entry_value 255
+      in
       draw_cube (Vector3.create x y 0.0) res res
-        ((Color.g mat_entry |> float_of_int) *. norm_scaler)
-        (color_func color_rule mat_entry);
+        ((Color.g scaled_mat_entry |> float_of_int) *. norm_scaler)
+        (color_func color_rule scaled_mat_entry);
       draw_seq (x +. res) y
   in
   draw_seq 0.0 0.0;
@@ -223,20 +194,20 @@ let not_clicked = ref true
 (** [draw_slider curr_res] draws the slider ui with the width specified by
     [curr_res] *)
 let draw_slider curr_res =
-  draw_text "RESOLUTION" 35 170 15 Color.blue;
-  draw_rectangle 30 200 curr_res 20 Color.blue;
-  draw_rectangle 25 195 5 30 Color.black;
-  draw_rectangle 25 195 115 5 Color.black;
-  draw_rectangle 135 195 5 30 Color.black;
-  draw_rectangle 25 220 115 5 Color.black
+  draw_text "RESOLUTION" 35 190 15 Color.blue;
+  draw_rectangle 30 220 curr_res 20 Color.blue;
+  draw_rectangle 25 215 5 30 Color.black;
+  draw_rectangle 25 215 115 5 Color.black;
+  draw_rectangle 135 215 5 30 Color.black;
+  draw_rectangle 25 240 115 5 Color.black
 
 let in_slider_range x_pos y_pos =
-  x_pos >= 30 && x_pos <= 130 && y_pos >= 200 && y_pos <= 220
+  x_pos >= 30 && x_pos <= 130 && y_pos >= 220 && y_pos <= 240
 
 (** [draw_ui seed res] creates the user interface to display basic functions and
     the current [seed] the perlin noise is based on, with slider of size [res] *)
 let draw_main_ui seed res =
-  draw_rectangle 10 10 150 250 Color.white;
+  draw_rectangle 10 10 170 250 Color.white;
   draw_text ("Current Seed: " ^ string_of_int seed) 35 30 10 Color.black;
   draw_text ("Input Seed: " ^ !input_seed) 35 40 10 Color.black;
   draw_text "Inputs" 55 60 10 Color.black;
@@ -246,8 +217,10 @@ let draw_main_ui seed res =
   draw_text "D: Landscape Noise" 35 100 10 Color.black;
   draw_text "F: Rust Noise" 35 110 10 Color.black;
   draw_text "P: Enter Playground" 35 120 10 Color.black;
-  draw_text "SPACE: Play/Pause" 35 130 10 Color.black;
-  draw_text "Mutations" 80 140 10 Color.black;
+  draw_text "W: Trigger Blur" 35 130 10 Color.black;
+  draw_text "LShift: Reset Blur" 35 140 10 Color.black;
+  draw_text "SPACE: Play/Pause" 35 150 10 Color.black;
+  draw_text "Mutations" 80 160 10 Color.black;
   if !not_clicked then
     draw_text "* Drag Mouse To Move Camera *" 600 10 20 Color.brown;
   draw_slider (int_of_float res);
@@ -284,6 +257,11 @@ let change_logic () =
     | _ -> ()
   in
   bounds ()
+
+let blur_logic () =
+  match blur_timer.control with
+  | Resume -> blur_timer.t <- blur_timer.t +. 0.05
+  | Pause -> ()
 
 let blank_mat () = Matrix.basic_matrix 600 600 (Color.create 0 0 0 255)
 
@@ -340,10 +318,15 @@ let rec loop mat seed color_rule camera =
         enter_playground (blank_mat ()) (top_down_cam ()) 30
     | Key.Enter -> draw_input mat seed color_rule camera
     | Key.Space -> play_movement mat seed color_rule camera
+    | Key.W -> play_blur mat seed color_rule camera
+    | Key.Left_shift ->
+        blur_timer.t <- 0.;
+        loop mat seed color_rule camera
     | key ->
         (* Allows for the user to input a seed, just keeps checking
            iteratively *)
         update_seed_input key;
+        blur_logic ();
         change_logic ();
         draw_perlin camera mat !input_res color_rule;
         draw_main_ui seed !input_res;
@@ -395,6 +378,16 @@ and play_movement mat seed color_rule camera =
   | Minus Resume -> over_time := (index, Minus Pause)
   | Plus Pause -> over_time := (index, Plus Resume)
   | Minus Pause -> over_time := (index, Minus Resume));
+  loop mat seed color_rule camera
+
+(** [play_blur mat seed color_rule camera] updates the noise to either pause or
+    resume. *)
+and play_blur mat seed color_rule camera =
+  (match blur_timer.control with
+  | Resume ->
+      blur_timer.control <- Pause;
+      blur_timer.init <- Known mat
+  | Pause -> blur_timer.control <- Resume);
   loop mat seed color_rule camera
 
 (** [enter_playground mat camera brush_size] creates a top-down view of a blank

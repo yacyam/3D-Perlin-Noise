@@ -36,6 +36,11 @@ val get_entry : int -> int -> 'a t -> 'a
     Requires: [row] and [col] must be within number of rows and columns defined
     within [matrix] *)
 
+val map : ('a -> 'a) -> 'a t -> 'a t
+(** [map f mat1 mat2] is a new matrix [mat2] constructed by applying [f] to each
+    individual element of [mat1]. Ensures that the elements stay the same type,
+    since that's a guarentee for our project. *)
+
 val to_string : ('a -> string) -> 'a t -> string
 (** [to_string matrix printer] creates a string representation of the matrix
     using an element printer to stringify each element *)

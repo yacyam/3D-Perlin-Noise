@@ -1,3 +1,4 @@
 (library
  (name linearalg)
- (public_name Linearalg))
+ (public_name Linearalg)
+ (libraries raylib))
