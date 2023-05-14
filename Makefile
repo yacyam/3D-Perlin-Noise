@@ -8,7 +8,7 @@ build:
 	dune build
 
 test:
-	dune exec test/perlin.exe
+	dune exec test/test.exe
 
 clean:
 	dune clean

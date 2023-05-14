@@ -6,7 +6,7 @@ val basic_dist_mat : int -> vector Matrix.t
 (** [basic_dist_mat n] creates a basic [n] by [n] matrix with each entry holding
     the zero vector. *)
 
-val normalize_dist : vector -> float * float * float
+val normalize_dist : vector -> vector
 (** [normalize_dist (x, y, z)] is for normalizing the lengths of the distance
     vectors to be scaled down by a factor of sqrt 2 *)
 

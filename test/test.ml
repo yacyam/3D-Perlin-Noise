@@ -1,3 +1,59 @@
+(* Test Plan: To create our tests, we firstly wanted to test the main
+   functionality that we created as the basis for our entire algorithm, namely
+   the matrix and vector operations which act on the distance vectors within the
+   matrix to interpolate them, and the main perlin functions which build up and
+   normalize our distance vectors in our matrix, to then take the gradient of
+   each pixel and its associated distance, smoothing them to create the desired
+   Perlin randomness, where each one of these parts were tested for complete
+   correctness. With this, we also tested the coloring part of our system, which
+   comprised of the different color creations that could be made based on the
+   output noise value from our main Perlin noise algorithm. This test suite
+   focused on the Vector module, Matrix module, Main module, and ColorRule
+   module, which comprise the core of our system. There were some parts in which
+   we couldn’t test, which comprised of our GUI library, Raylib, and its
+   associated functions which create the screen, draw on the screen, and take in
+   user input to cause for some part of the display to change based on what was
+   inputted. We needed to manually test through mouse clicks and keyboard inputs
+   whether our drawing functions and user interface updated correctly, for
+   example, inputting a seed and testing that our system only accepts numerical
+   inputs, along with drawing on the screen for our drawing mode to ensure that
+   no part of our system breaks even at the edges. These functions are all
+   comprised of our Perlin.ml file, making up the part of our system which
+   needed manual testing to ensure correctness. The modules we tested by OUnit,
+   as stated before, are the Vector, Matrix, Main, and ColorRule modules. We
+   firstly wanted to create black box test cases for our Vector and Matrix
+   modules, as they were the backbone for our algorithm, focusing on the
+   specification of certain functions such as adding entries to the matrix,
+   where we added to the corners of the matrix to account for boundary cases,
+   and we also added to the middle and random points to account for more general
+   cases. We took a similar approach for vector functions such as dot product,
+   where we took dot products with very large and small floating-point numbers,
+   along with more general numbers to ensure correctness. We took this same
+   methodology to the Main and ColorRule modules, where we tested functions such
+   as smooth and dot_grad_dist with large and small values and distance vectors
+   to make sure that each function worked based on their specification, and we
+   also did this with each coloring rule, taking into account edge cases for
+   values right above and below 0 to 255 which is our coloring range, along with
+   regular values within that range so that all values would be colored
+   correctly. We also delved into glass-box testing for larger functions such as
+   distance_matrix, as this was the crux of our algorithm, ensuring that we
+   would account for various matrix sizes and starting x and y positions to
+   guarantee that any possible path an input would take through the function
+   would be guaranteed to create each distance correctly in the correct x and y
+   positions. This approach to our testing demonstrates the correctness of the
+   system, as we’ve accounted for the main functionality of our algorithm, with
+   the associated modules as described above, by accounting for many general
+   cases and boundary/extreme cases for many core functions that are used
+   throughout the noise generation algorithm, in which we’ve also tested to
+   ensure the correctness of the output. With this, we’ve also made sure to go
+   through and create glass box testing when necessary to ensure all inputs,
+   extreme and general, would succeed in generating the desired matrices and
+   noise values for all our main functions that weren’t drawing on the screen.
+   For our drawing functions, we manually tested them through various user
+   inputs, mouse movements, and clicks to ensure that any possible input the
+   user could do on the screen wouldn’t crash the system, creating assurance
+   that our system works correctly. *)
+
 open OUnit2
 open Linearalg
 open Matrix
@@ -142,7 +198,7 @@ let cross_tests =
       ((0., 0., 0.), (0., 0., 0.))
       "(0., 0., 0.)";
     cross_test "cross product of same positive vector"
-      ((3.5, 1.2, 1.), (3.5, 1.2, 1.))
+      ((3.4, 1., 1.), (3.4, 1., 1.))
       "(0., 0., 0.)";
     cross_test "cross product of same negative vector"
       ((-2., -1., -5.9), (-2., -1., -5.9))

@@ -1,5 +1,7 @@
 open Raylib.Color
 
+(** Implements the main coloring of the generated perlin noise *)
+
 val rule_grayscale : int -> t
 (** [convert_grayscale x] takes in a float (random number generated from perlin
     noise) and outputs a grayscale rgb value based on the range the value [x]
