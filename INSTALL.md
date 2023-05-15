@@ -18,4 +18,5 @@ Third: Run 'opam install raylib'
     the installation fully finish.
   - Make sure you installed Raylib.1.0.0 or a later version. If not you may still
     need to run 'opam update' and 'opam upgrade'.
+  - After this, you can run 'make build' and 'make play' to display the window.
 

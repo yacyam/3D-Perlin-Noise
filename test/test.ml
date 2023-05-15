@@ -439,6 +439,14 @@ let get_row_tests =
       [ 0 ];
     get_row_test "10000th row of very skinny matrix is single element" 9999
       very_skinny [ 0 ];
+    get_row_test "500th row of very skinny matrix is single element" 499
+      very_skinny [ 0 ];
+    get_row_test "5000th row of very skinny matrix is single element" 4999
+      very_skinny [ 0 ];
+    get_row_test "general row of very skinny matrix is single element" 2431
+      very_skinny [ 0 ];
+    get_row_test "another general row of very skinny matrix is single element"
+      7156 very_skinny [ 0 ];
   ]
 
 let add_row_test (name : string) (row_list : 'a list) (matrix : 'a Matrix.t)
@@ -589,6 +597,10 @@ let dot_grad_dist_tests =
     dot_grad_dist_test "rotated 3pi/2" 2 (1.3, -2., 0.) 3.3;
     dot_grad_dist_test "rand val bounded" 1243123 (12., 13., 0.) ~-.25.;
     dot_grad_dist_test "neg val bounded" ~-123 (2., 4., 0.) ~-.6.;
+    dot_grad_dist_test "very large val bounded" 10000000000000 (2., 5., 0.)
+      ~-.7.;
+    dot_grad_dist_test "very large neg val bounded" (-1000000000000)
+      (3., 4., 0.) ~-.7.;
   ]
 
 let interpolate_test (name : string) (u_l : float) (u_r : float) (l_l : float)
@@ -605,6 +617,21 @@ let interpolate_tests =
     interpolate_test "0.4 frac 0.1 frac" 6.2 1.2 0.3 1.1 0.4 0.1 0.59;
     interpolate_test "1.0 fracs" 7.2 (-3.3) (-4.0) (-2.1) 1.0 1.0 (-3.3);
     interpolate_test "0. fracs" 3.3 4.4 5.5 6.6 0. 0. 5.5;
+    interpolate_test "left frac 1.0 right 0" 6.4 (-4.5) (-4.0) (-2.5) 1.0 0.0
+      (-2.5);
+    interpolate_test "right frac 1.0 left 0" 9.8 (-1.2) (-4.1) (-5.5) 0.0 1.0
+      9.8;
+    interpolate_test "general value fracs" (-8.2) (-5.3) (-2.0) (-2.5) 0.6 0.35
+      (-3.25);
+    interpolate_test "more general value fracs" 2.1 3.7 2.2 (-5.5) 0.14 0.923
+      2.13;
+    interpolate_test "tiny pixel ranges work" 0.0012 0.724 0.000002 (-0.1023)
+      0.4 0.6 0.15;
+    interpolate_test "huge pixel ranges work" 500000. 100000000. 2331000000.
+      4444444. 0.5 0.5 608986111.;
+    interpolate_test "tiny and huge pixel ranges work" 10000000000000.
+      (-0.000000000001) 1000000000000000. 0.00000000000011111 0.5 0.5
+      252500000000000.;
   ]
 
 (* size of actual grid for perlin alg *)
@@ -617,6 +644,14 @@ let basic_dist_mat_tests =
     get_entry_test "last entry basic dist is 0 vector" 599 599 basic_mat
       (0., 0., 0.);
     get_entry_test "middle elem basic dist is 0 vector" 299 299 basic_mat
+      (0., 0., 0.);
+    get_entry_test "bottom left corner is the 0 vector" 0 599 basic_mat
+      (0., 0., 0.);
+    get_entry_test "top right corner is the 0 vector" 599 0 basic_mat
+      (0., 0., 0.);
+    get_entry_test "general element is the 0 vector" 231 526 basic_mat
+      (0., 0., 0.);
+    get_entry_test "another general elem is the 0 vector" 123 412 basic_mat
       (0., 0., 0.);
     row_length_test "size of rows are 600" basic_mat 600;
   ]

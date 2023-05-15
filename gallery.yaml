@@ -21,10 +21,10 @@ git-repo: "https://github.coecis.cornell.edu/yam22/cs-3110-final-project"
 demo-video-url: ""
 # Write a short, attention-grabbing description of your project.
 desc: >
-  Our project is an interactive Perlin Noise generator. It displays
-  on the screen a variety of visually stunning grayscale and colored patterns,
-  building up each noise generation block by block. Users can select through
-  clicking the numerous buttons the exact visual noise generation that they want
-  to see, from fractal noise, to colored landscapes, woody textures, and more.
-  Everything is on screen, allowing for the user to simply click a button,
-  and a random noise visualization will be generated every time.
+  Our project is an interactive 3D Perlin Noise generator. It displays
+  on the screen a three-dimensional terrain in which the user can view
+  from many different angles. As the user, you can color the noise to
+  look like rivers and mountains, or even like a volcano, and can create
+  your own noise by drawing on the screen or inputting a seed value. This
+  project also offers visually stunning ways of mutating the noise in 
+  real-time, simulating changes in environments.
