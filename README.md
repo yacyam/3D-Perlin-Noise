@@ -19,7 +19,7 @@ Our project is an interactive 3D Perlin Noise generator. It displays
   <li>Harriet Kumah</li>
 </ul>
 
-Project Install Guide:
+<h3>Project Install Guide:</h3>
 
 First: Install OPAM and OCaml
   - Carefully Follow the guide at 
@@ -41,7 +41,8 @@ Third: Run 'opam install raylib'
     need to run 'opam update' and 'opam upgrade'.
   - After this, you can run 'make build' and 'make play' to display the window.
 
-Resources Used for Perlin Algorithm (credit):
+
+<h3>Resources Used for Perlin Algorithm (<i>credit</i>):</h3>
 
 https://rtouti.github.io/graphics/perlin-noise-algorithm (By: Touti Raouf, touti.raouf@gmail.com)
   - Used to learn general overview of perlin noise implementation
