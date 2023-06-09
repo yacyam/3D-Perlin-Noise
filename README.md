@@ -14,9 +14,9 @@ Our project is an interactive 3D Perlin Noise generator. It displays
 
 <h3>Team:</h3>
 <ul>
-  <li>Yacqub Mohamed</li>
-  <li>Mitch Verhelle</li>
-  <li>Harriet Kumah</li>
+  <li>Yacqub</li>
+  <li>Mitch</li>
+  <li>Harriet</li>
 </ul>
 
 <h3>Project Install Guide:</h3>
